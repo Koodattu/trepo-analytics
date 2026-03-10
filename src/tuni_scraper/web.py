@@ -88,6 +88,7 @@ def create_app(db_path: Path = DEFAULT_DB_PATH) -> Flask:
             top_interesting=database.get_top_by_interestingness(10),
             least_downloads=database.get_least_downloads(10),
             least_trending=database.get_least_trending(10),
+            top_signal_rich=database.get_top_signal_rich_works(10),
             publication_counts_by_year=database.get_publication_counts_by_year(),
             download_counts_by_year=database.get_download_counts_by_year(),
             type_counts_overall=database.get_type_counts_overall(),

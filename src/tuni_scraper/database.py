@@ -378,6 +378,86 @@ class Database:
             (limit,),
         )
 
+    def get_top_signal_rich_works(self, limit: int = 10) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            """
+            WITH ranked AS (
+                SELECT
+                    title,
+                    author,
+                    year,
+                    work_type,
+                    interestingness_rating,
+                    downloads,
+                    handle_url,
+                    accepted_date,
+                    CASE
+                        WHEN accepted_date IS NOT NULL
+                             AND downloads IS NOT NULL
+                             AND (julianday('now') - julianday(accepted_date)) > 0
+                        THEN ROUND(
+                            CAST(downloads AS REAL) / (julianday('now') - julianday(accepted_date)),
+                            2
+                        )
+                        ELSE NULL
+                    END AS downloads_per_day,
+                    ROW_NUMBER() OVER (
+                        ORDER BY downloads DESC, interestingness_rating DESC, title ASC
+                    ) AS download_rank,
+                    ROW_NUMBER() OVER (
+                        ORDER BY interestingness_rating DESC, downloads DESC, title ASC
+                    ) AS interest_rank,
+                    COUNT(*) OVER () AS candidate_count
+                FROM works
+                WHERE downloads IS NOT NULL
+                  AND downloads >= 5
+                  AND interestingness_rating IS NOT NULL
+            ),
+            scored AS (
+                SELECT
+                    title,
+                    author,
+                    year,
+                    work_type,
+                    interestingness_rating,
+                    downloads,
+                    handle_url,
+                    accepted_date,
+                    downloads_per_day,
+                    ROUND(
+                        CASE
+                            WHEN candidate_count = 0 THEN 0
+                            ELSE (
+                                2.0
+                                * ((candidate_count - download_rank + 1.0) / candidate_count)
+                                * ((candidate_count - interest_rank + 1.0) / candidate_count)
+                            ) / (
+                                ((candidate_count - download_rank + 1.0) / candidate_count)
+                                + ((candidate_count - interest_rank + 1.0) / candidate_count)
+                            ) * 100.0
+                        END,
+                        1
+                    ) AS signal_score
+                FROM ranked
+            )
+            SELECT
+                title,
+                author,
+                year,
+                work_type,
+                interestingness_rating,
+                downloads,
+                handle_url,
+                accepted_date,
+                downloads_per_day,
+                signal_score
+            FROM scored
+            ORDER BY signal_score DESC, downloads DESC, interestingness_rating DESC, title ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
     def get_top_authors(self, limit: int = 10) -> list[sqlite3.Row]:
         return self.fetch_rows(
             """

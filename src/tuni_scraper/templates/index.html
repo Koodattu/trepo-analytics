@@ -170,7 +170,10 @@
           </div>
         </article>
 
-        {#
+      </section>
+
+      <section class="mb-8 grid gap-5 xl:grid-cols-3">
+
         <!-- Least downloaded -->
         <article class="border border-stone-300 bg-white">
           <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
@@ -242,7 +245,42 @@
             </table>
           </div>
         </article>
-        #}
+
+        <!-- Signal-rich picks -->
+        <article class="border border-stone-300 bg-white">
+          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
+            <h2 class="font-serif text-lg font-semibold text-stone-900">Signal-Rich Picks</h2>
+            <p class="ml-4 mt-0.5 text-xs text-stone-400">Top 10 balancing download rank and title-interest rank</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Score</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Interest</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in top_signal_rich %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.signal_score if row.signal_score is not none else '—' }}</td>
+                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
+                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
+                  <td class="px-4 py-2.5 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No blended ranking data available yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
 
       </section>
 
