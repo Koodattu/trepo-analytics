@@ -10,6 +10,14 @@ from tuni_scraper.models import PublicationRecord, ScrapeProgress
 
 PROGRESS_KEY = "recent_submissions"
 
+WORK_SORT_FIELDS = {
+    "downloads": "COALESCE(w.downloads, -1)",
+    "downloads_per_day": "COALESCE(downloads_per_day, -1)",
+    "rank": "COALESCE(r.dl_rank, 2147483647)",
+    "interest": "COALESCE(w.interestingness_rating, -1)",
+    "accepted": "COALESCE(date(w.accepted_date), '')",
+}
+
 
 def utc_now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
@@ -36,6 +44,7 @@ class Database:
                     author TEXT,
                     year INTEGER,
                     work_type TEXT,
+                    interestingness_rating INTEGER,
                     downloads INTEGER,
                     accepted_date TEXT,
                     listing_offset INTEGER,
@@ -58,6 +67,8 @@ class Database:
             existing_cols = {row[1] for row in connection.execute("PRAGMA table_info(works)")}
             if "accepted_date" not in existing_cols:
                 connection.execute("ALTER TABLE works ADD COLUMN accepted_date TEXT")
+            if "interestingness_rating" not in existing_cols:
+                connection.execute("ALTER TABLE works ADD COLUMN interestingness_rating INTEGER")
 
     def get_progress(
         self,
@@ -128,6 +139,7 @@ class Database:
                     author,
                     year,
                     work_type,
+                    interestingness_rating,
                     downloads,
                     accepted_date,
                     listing_offset,
@@ -136,7 +148,7 @@ class Database:
                     last_seen_at,
                     detail_scraped_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(handle_url) DO UPDATE SET
                     title = excluded.title,
                     author = excluded.author,
@@ -152,6 +164,7 @@ class Database:
                     record.author,
                     record.year,
                     record.work_type,
+                    None,
                     record.downloads,
                     record.accepted_date,
                     record.listing_offset,
@@ -189,6 +202,40 @@ class Database:
                 WHERE handle_url = ?
                 """,
                 (downloads, accepted_date, timestamp, timestamp, handle_url),
+            )
+
+    def get_works_for_interest_rating(
+        self,
+        limit: int | None = None,
+        include_rated: bool = False,
+    ) -> list[sqlite3.Row]:
+        query = """
+            SELECT handle_url, title, interestingness_rating
+            FROM works
+            WHERE title IS NOT NULL AND TRIM(title) != ''
+        """
+        params: list[object] = []
+
+        if not include_rated:
+            query += " AND interestingness_rating IS NULL"
+
+        query += " ORDER BY year DESC, title ASC"
+
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
+
+        return self.fetch_rows(query, params)
+
+    def update_interest_ratings(self, ratings: Sequence[tuple[int, str]]) -> None:
+        with self._connect() as connection:
+            connection.executemany(
+                """
+                UPDATE works
+                SET interestingness_rating = ?
+                WHERE handle_url = ?
+                """,
+                ratings,
             )
 
     def fetch_rows(self, query: str, params: Sequence[object] = ()) -> list[sqlite3.Row]:
@@ -256,6 +303,29 @@ class Database:
               AND accepted_date IS NOT NULL
               AND (julianday('now') - julianday(accepted_date)) > 0
             ORDER BY downloads_per_day DESC, downloads DESC, title ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
+    def get_top_by_interestingness(self, limit: int = 10) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            """
+            SELECT
+                title, author, year, work_type, interestingness_rating, downloads, handle_url, accepted_date,
+                CASE
+                    WHEN accepted_date IS NOT NULL
+                         AND downloads IS NOT NULL
+                         AND (julianday('now') - julianday(accepted_date)) > 0
+                    THEN ROUND(
+                        CAST(downloads AS REAL) / (julianday('now') - julianday(accepted_date)),
+                        2
+                    )
+                    ELSE NULL
+                END AS downloads_per_day
+            FROM works
+            WHERE interestingness_rating IS NOT NULL
+            ORDER BY interestingness_rating DESC, downloads DESC, title ASC
             LIMIT ?
             """,
             (limit,),
@@ -403,6 +473,12 @@ class Database:
         work_type: str | None = None,
         min_downloads: int | None = None,
         max_downloads: int | None = None,
+        min_interest: int | None = None,
+        max_interest: int | None = None,
+        accepted_start: str | None = None,
+        accepted_end: str | None = None,
+        sort_by: str = "downloads",
+        sort_direction: str = "desc",
         limit: int = 10,
     ) -> list[sqlite3.Row]:
         # dl_rank is computed once across the entire works table via a CTE window
@@ -416,7 +492,7 @@ class Database:
             )
             SELECT
                 w.handle_url, w.title, w.author, w.year, w.work_type,
-                w.downloads, w.accepted_date,
+                w.interestingness_rating, w.downloads, w.accepted_date,
                 r.dl_rank,
                 CASE
                     WHEN w.accepted_date IS NOT NULL
@@ -461,10 +537,34 @@ class Database:
             query += " AND COALESCE(w.downloads, 0) <= ?"
             params.append(max_downloads)
 
-        query += """
+        if min_interest is not None:
+            query += " AND w.interestingness_rating IS NOT NULL AND w.interestingness_rating >= ?"
+            params.append(min_interest)
+
+        if max_interest is not None:
+            query += " AND w.interestingness_rating IS NOT NULL AND w.interestingness_rating <= ?"
+            params.append(max_interest)
+
+        if accepted_start:
+            query += " AND w.accepted_date IS NOT NULL AND date(w.accepted_date) >= date(?)"
+            params.append(accepted_start)
+
+        if accepted_end:
+            query += " AND w.accepted_date IS NOT NULL AND date(w.accepted_date) <= date(?)"
+            params.append(accepted_end)
+
+        resolved_sort_field = WORK_SORT_FIELDS.get(sort_by, WORK_SORT_FIELDS["downloads"])
+        resolved_sort_direction = "ASC" if sort_direction.lower() == "asc" else "DESC"
+
+        query += f"""
             ORDER BY
-                CASE WHEN w.downloads IS NULL THEN 1 ELSE 0 END,
-                w.downloads DESC,
+                CASE
+                    WHEN '{sort_by}' = 'accepted' THEN CASE WHEN w.accepted_date IS NULL OR w.accepted_date = '' THEN 1 ELSE 0 END
+                    WHEN '{sort_by}' = 'downloads_per_day' THEN CASE WHEN downloads_per_day IS NULL THEN 1 ELSE 0 END
+                    WHEN '{sort_by}' = 'interest' THEN CASE WHEN w.interestingness_rating IS NULL THEN 1 ELSE 0 END
+                    ELSE CASE WHEN {resolved_sort_field} < 0 THEN 1 ELSE 0 END
+                END,
+                {resolved_sort_field} {resolved_sort_direction},
                 w.year DESC,
                 w.title ASC
             LIMIT ?
@@ -476,7 +576,7 @@ class Database:
     def get_all_works(self) -> list[dict[str, object]]:
         rows = self.fetch_rows(
             """
-            SELECT handle_url, title, author, year, work_type, downloads, accepted_date,
+            SELECT handle_url, title, author, year, work_type, interestingness_rating, downloads, accepted_date,
                    listing_offset, listing_url, first_seen_at, last_seen_at, detail_scraped_at
             FROM works
             ORDER BY year DESC, title ASC

@@ -59,8 +59,8 @@
         </article>
       </section>
 
-      <!-- Top tables row: Most downloaded + Trending + Least downloaded + Least trending -->
-      <section class="mb-8 grid gap-5 xl:grid-cols-4">
+      <!-- Top tables row: Most downloaded + Trending + Most interesting -->
+      <section class="mb-8 grid gap-5 xl:grid-cols-3">
 
         <!-- Most downloaded -->
         <article class="border border-stone-300 bg-white">
@@ -134,6 +134,43 @@
           </div>
         </article>
 
+        <!-- Most interesting -->
+        <article class="border border-stone-300 bg-white">
+          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
+            <h2 class="font-serif text-lg font-semibold text-stone-900">Most Interesting</h2>
+            <p class="ml-4 mt-0.5 text-xs text-stone-400">Top 10 by LLM title interestingness rating</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Interest</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in top_interesting %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads if row.downloads is not none else '—' }}</td>
+                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
+                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-4 py-2.5 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No interestingness ratings available yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        {#
         <!-- Least downloaded -->
         <article class="border border-stone-300 bg-white">
           <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
@@ -205,6 +242,7 @@
             </table>
           </div>
         </article>
+        #}
 
       </section>
 
@@ -298,17 +336,33 @@
 
       <!-- Publications by month chart -->
       <section class="mb-8 border border-stone-300 bg-white">
-        <div class="flex flex-wrap items-center gap-3 border-b-2 border-[#1e3a6e] px-5 py-3">
+        <div class="flex flex-col gap-3 border-b-2 border-[#1e3a6e] px-5 py-3 xl:flex-row xl:items-center xl:justify-between">
           <h2 class="font-serif text-xl font-semibold text-stone-900">Submissions by month</h2>
           {% if pub_counts_by_month %}
-          <div id="monthRangeButtons" class="ml-auto flex gap-1">
-            <button data-range="1"  class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">Last year</button>
-            <button data-range="5"  class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">5 years</button>
-            <button data-range="10" class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">10 years</button>
-            <button data-range="15" class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">15 years</button>
-            <button data-range="20" class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">20 years</button>
-            <button data-range="25" class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">25 years</button>
-            <button data-range="0"  class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">All</button>
+          <div class="flex flex-col gap-3 xl:items-end">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end xl:flex-nowrap">
+              <div class="min-w-40">
+                <label for="monthPreset" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Range preset</label>
+                <select id="monthPreset" class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none">
+                  <option value="1">Last year</option>
+                  <option value="5">5 years</option>
+                  <option value="10">10 years</option>
+                  <option value="15">15 years</option>
+                  <option value="20">20 years</option>
+                  <option value="25">25 years</option>
+                  <option value="0">All</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              <div class="min-w-36">
+                <label for="monthStart" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Start month</label>
+                <input id="monthStart" type="month" class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none" />
+              </div>
+              <div class="min-w-36">
+                <label for="monthEnd" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">End month</label>
+                <input id="monthEnd" type="month" class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none" />
+              </div>
+            </div>
           </div>
           {% endif %}
         </div>
@@ -379,32 +433,83 @@
 
           const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
           const rawMonthData = {{ pub_counts_by_month | tojson }};
+            const now = new Date();
+            const currentMonthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
           // Build full dense series from raw data
           const allMonthLabels = [];
           const allMonthCounts = [];
+          const allMonthValues = [];
           if (rawMonthData.length) {
-            const minYear = rawMonthData[0].year;
-            const maxYear = rawMonthData[rawMonthData.length - 1].year;
+              const firstMonth = rawMonthData[0];
             const lookup = {};
-            rawMonthData.forEach(d => { lookup[d.year + '-' + d.month] = d.publication_count; });
-            for (let y = minYear; y <= maxYear; y++) {
-              for (let m = 1; m <= 12; m++) {
+              rawMonthData.forEach(d => {
+                const monthValue = `${d.year}-${String(d.month).padStart(2, '0')}`;
+                lookup[monthValue] = d.publication_count;
+              });
+              for (let y = firstMonth.year; y <= now.getFullYear(); y++) {
+                const monthStart = y === firstMonth.year ? firstMonth.month : 1;
+                const monthEnd = y === now.getFullYear() ? now.getMonth() + 1 : 12;
+                for (let m = monthStart; m <= monthEnd; m++) {
+                const monthValue = `${y}-${String(m).padStart(2, '0')}`;
                 allMonthLabels.push(MONTH_NAMES[m - 1] + ' ' + y);
-                allMonthCounts.push(lookup[y + '-' + m] ?? 0);
+                allMonthValues.push(monthValue);
+                  allMonthCounts.push(lookup[monthValue] ?? 0);
               }
             }
           }
 
-          // Render the month chart filtered to lastNYears (0 = all)
+          const monthStartInput = document.getElementById('monthStart');
+          const monthEndInput = document.getElementById('monthEnd');
+          const monthPresetSelect = document.getElementById('monthPreset');
+          const minMonthValue = allMonthValues[0] ?? '';
+          const maxMonthValue = allMonthValues[allMonthValues.length - 1] ?? '';
+
+          if (monthStartInput && minMonthValue) {
+            monthStartInput.min = minMonthValue;
+            monthStartInput.max = maxMonthValue;
+          }
+          if (monthEndInput && maxMonthValue) {
+            monthEndInput.min = minMonthValue;
+            monthEndInput.max = maxMonthValue;
+          }
+
+          function clampMonthValue(value) {
+            if (!value) return '';
+            if (value < minMonthValue) return minMonthValue;
+            if (value > maxMonthValue) return maxMonthValue;
+            return value;
+          }
+
+          function setPresetValue(activePreset) {
+            if (!monthPresetSelect) return;
+            monthPresetSelect.value = activePreset === null ? 'custom' : String(activePreset);
+          }
+
+          function findMonthIndex(monthValue) {
+            return allMonthValues.indexOf(monthValue);
+          }
+
           let monthChart = null;
-          function renderMonthChart(lastNYears) {
+          function renderMonthChart(startMonthValue, endMonthValue) {
             const monthCanvas = document.getElementById('chartPubsByMonth');
             if (!monthCanvas || !allMonthLabels.length) return;
 
-            const sliceMonths = lastNYears > 0 ? lastNYears * 12 : allMonthLabels.length;
-            const labels = allMonthLabels.slice(-sliceMonths);
-            const counts = allMonthCounts.slice(-sliceMonths);
+            const safeStart = clampMonthValue(startMonthValue || minMonthValue);
+            const safeEnd = clampMonthValue(endMonthValue || maxMonthValue);
+
+            let startIndex = findMonthIndex(safeStart);
+            let endIndex = findMonthIndex(safeEnd);
+            if (startIndex === -1) startIndex = 0;
+            if (endIndex === -1) endIndex = allMonthValues.length - 1;
+            if (startIndex > endIndex) {
+              const swapped = startIndex;
+              startIndex = endIndex;
+              endIndex = swapped;
+            }
+
+            const labels = allMonthLabels.slice(startIndex, endIndex + 1);
+            const counts = allMonthCounts.slice(startIndex, endIndex + 1);
 
             // Auto-skip: aim for at most ~20 visible x labels
             const maxTicks = Math.min(20, labels.length);
@@ -434,24 +539,51 @@
             }
           }
 
-          // Wire up range buttons
-          const rangeButtons = document.querySelectorAll('.month-range-btn');
-          let activeRange = 0; // default: all
-          function setActiveRange(range) {
-            activeRange = range;
-            rangeButtons.forEach(btn => {
-              const active = parseInt(btn.dataset.range) === range;
-              btn.classList.toggle('bg-[#1e3a6e]', active);
-              btn.classList.toggle('text-white', active);
-              btn.classList.toggle('border-[#1e3a6e]', active);
-              btn.classList.toggle('text-stone-500', !active);
-            });
-            renderMonthChart(range);
+          function applyMonthRange(startMonthValue, endMonthValue, activePreset = 'custom') {
+            if (!monthStartInput || !monthEndInput || !minMonthValue || !maxMonthValue) return;
+            const normalizedStart = clampMonthValue(startMonthValue || minMonthValue);
+            const normalizedEnd = clampMonthValue(endMonthValue || maxMonthValue);
+            if (normalizedStart <= normalizedEnd) {
+              monthStartInput.value = normalizedStart;
+              monthEndInput.value = normalizedEnd;
+              renderMonthChart(normalizedStart, normalizedEnd);
+            } else {
+              monthStartInput.value = normalizedEnd;
+              monthEndInput.value = normalizedStart;
+              renderMonthChart(normalizedEnd, normalizedStart);
+            }
+            setPresetValue(activePreset);
           }
-          rangeButtons.forEach(btn => {
-            btn.addEventListener('click', () => setActiveRange(parseInt(btn.dataset.range)));
-          });
-          setActiveRange(20);
+
+          function applyPresetRange(years) {
+            if (!minMonthValue || !maxMonthValue) return;
+            if (years === 0) {
+              applyMonthRange(minMonthValue, maxMonthValue, 0);
+              return;
+            }
+
+            const endIndex = allMonthValues.length - 1;
+            const startIndex = Math.max(0, endIndex - (years * 12) + 1);
+            applyMonthRange(allMonthValues[startIndex], allMonthValues[endIndex], years);
+          }
+
+          if (monthPresetSelect) {
+            monthPresetSelect.addEventListener('change', () => {
+              if (monthPresetSelect.value === 'custom') {
+                applyMonthRange(monthStartInput?.value, monthEndInput?.value, 'custom');
+                return;
+              }
+
+              applyPresetRange(parseInt(monthPresetSelect.value, 10));
+            });
+          }
+
+          if (monthStartInput && monthEndInput) {
+            monthStartInput.addEventListener('change', () => applyMonthRange(monthStartInput.value, monthEndInput.value, 'custom'));
+            monthEndInput.addEventListener('change', () => applyMonthRange(monthStartInput.value, monthEndInput.value, 'custom'));
+          }
+
+          applyMonthRange('1990-01', currentMonthValue, 'custom');
 
           const barOpts = () => ({
             responsive: true,
@@ -487,20 +619,38 @@
             },
           });
 
-          // Month chart is initialised above via setActiveRange(0)
+          // Month chart is initialised above via applyPresetRange(20)
         })();
       </script>
 
       <!-- Search / filter -->
       <section class="mb-8 border border-stone-300 bg-white px-5 py-5 sm:px-6">
-        <div class="flex items-start justify-between gap-3 border-b-2 border-[#1e3a6e] pb-3">
-          <div>
-            <h2 class="font-serif text-xl font-semibold text-stone-900">Search the database</h2>
-            <p class="mt-0.5 text-sm text-stone-500">Filter by title, author, year, type, and download range.</p>
+        <form id="searchForm">
+          <div class="flex flex-col gap-4 border-b-2 border-[#1e3a6e] pb-3 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <h2 class="font-serif text-xl font-semibold text-stone-900">Search the database</h2>
+              <p class="mt-0.5 text-sm text-stone-500">Filter by metadata, accepted-date range, score ranges, and sort the result set any way you need.</p>
+            </div>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end xl:justify-end">
+              <a href="/" class="order-1 text-xs font-medium uppercase tracking-widest text-stone-400 underline-offset-2 hover:text-[#1e3a6e] hover:underline sm:order-none sm:mb-2">Clear filters</a>
+              <div class="min-w-24 flex-1 sm:max-w-32">
+                <label for="limit" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Result limit</label>
+                <input
+                  id="limit"
+                  name="limit"
+                  type="number"
+                  min="1"
+                  max="500"
+                  value="{{ filters.limit }}"
+                  class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+                />
+              </div>
+              <div class="shrink-0">
+                <button type="submit" class="w-full border border-[#1e3a6e] bg-[#1e3a6e] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#162e58] sm:w-auto">Apply filters</button>
+              </div>
+            </div>
           </div>
-          <a href="/" class="mt-1 shrink-0 text-xs font-medium uppercase tracking-widest text-stone-400 underline-offset-2 hover:text-[#1e3a6e] hover:underline">Clear filters</a>
-        </div>
-        <form id="searchForm" class="mt-4 flex flex-wrap items-end gap-3">
+          <div class="mt-4 flex flex-wrap items-end gap-3">
           <div class="min-w-48 flex-[2]">
             <label for="title" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Title</label>
             <input
@@ -575,20 +725,75 @@
               class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
             />
           </div>
-          <div class="min-w-24 flex-1">
-            <label for="limit" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Result limit</label>
+          <div class="min-w-28 flex-1">
+            <label for="min_interest" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Min interest</label>
             <input
-              id="limit"
-              name="limit"
+              id="min_interest"
+              name="min_interest"
               type="number"
-              min="1"
-              max="500"
-              value="{{ filters.limit }}"
+              min="0"
+              max="100"
+              value="{{ filters.min_interest if filters.min_interest is not none else '' }}"
               class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
             />
           </div>
-          <div class="shrink-0">
-            <button type="submit" class="border border-[#1e3a6e] bg-[#1e3a6e] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#162e58]">Apply filters</button>
+          <div class="min-w-28 flex-1">
+            <label for="max_interest" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Max interest</label>
+            <input
+              id="max_interest"
+              name="max_interest"
+              type="number"
+              min="0"
+              max="100"
+              value="{{ filters.max_interest if filters.max_interest is not none else '' }}"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            />
+          </div>
+          <div class="min-w-36 flex-1">
+            <label for="accepted_start" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Accepted from</label>
+            <input
+              id="accepted_start"
+              name="accepted_start"
+              type="date"
+              value="{{ filters.accepted_start }}"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            />
+          </div>
+          <div class="min-w-36 flex-1">
+            <label for="accepted_end" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Accepted to</label>
+            <input
+              id="accepted_end"
+              name="accepted_end"
+              type="date"
+              value="{{ filters.accepted_end }}"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            />
+          </div>
+          <div class="min-w-40 flex-1">
+            <label for="sort_by" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Sort by</label>
+            <select
+              id="sort_by"
+              name="sort_by"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            >
+              <option value="downloads" {{ 'selected' if filters.sort_by == 'downloads' else '' }}>Downloads</option>
+              <option value="downloads_per_day" {{ 'selected' if filters.sort_by == 'downloads_per_day' else '' }}>Downloads per day</option>
+              <option value="rank" {{ 'selected' if filters.sort_by == 'rank' else '' }}>Rank</option>
+              <option value="interest" {{ 'selected' if filters.sort_by == 'interest' else '' }}>Interest</option>
+              <option value="accepted" {{ 'selected' if filters.sort_by == 'accepted' else '' }}>Accepted date</option>
+            </select>
+          </div>
+          <div class="min-w-32 flex-1">
+            <label for="sort_direction" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Direction</label>
+            <select
+              id="sort_direction"
+              name="sort_direction"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            >
+              <option value="desc" {{ 'selected' if filters.sort_direction == 'desc' else '' }}>Descending</option>
+              <option value="asc" {{ 'selected' if filters.sort_direction == 'asc' else '' }}>Ascending</option>
+            </select>
+          </div>
           </div>
         </form>
       </section>
@@ -605,6 +810,7 @@
                 <th class="border-b border-stone-200 px-4 py-3 font-semibold">#</th>
                 <th class="border-b border-stone-200 px-4 py-3 font-semibold">Downloads</th>
                 <th class="border-b border-stone-200 px-4 py-3 font-semibold">DL&thinsp;/&thinsp;day</th>
+                <th class="border-b border-stone-200 px-4 py-3 font-semibold">Interest</th>
                 <th class="border-b border-stone-200 px-4 py-3 font-semibold">Title</th>
                 <th class="border-b border-stone-200 px-4 py-3 font-semibold">Author</th>
                 <th class="border-b border-stone-200 px-4 py-3 font-semibold">Type</th>
@@ -617,6 +823,7 @@
                 <td class="px-4 py-3 font-mono text-xs text-stone-400">{{ row.dl_rank }}</td>
                 <td class="px-4 py-3 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads if row.downloads is not none else '—' }}</td>
                 <td class="px-4 py-3 font-mono text-sm text-stone-600">{{ row.downloads_per_day if row.downloads_per_day is not none else '—' }}</td>
+                <td class="px-4 py-3 font-mono text-sm text-stone-600">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
                 <td class="px-4 py-3 text-stone-800">
                   <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                 </td>
@@ -626,7 +833,7 @@
               </tr>
               {% else %}
               <tr>
-                <td colspan="7" class="px-4 py-12 text-center text-sm italic text-stone-400">No works match the current filters.</td>
+                <td colspan="8" class="px-4 py-12 text-center text-sm italic text-stone-400">No works match the current filters.</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -650,7 +857,7 @@
 
           function renderRows(works) {
             if (!works.length) {
-              tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-12 text-center text-sm italic text-stone-400">No works match the current filters.</td></tr>';
+              tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-12 text-center text-sm italic text-stone-400">No works match the current filters.</td></tr>';
               return;
             }
             tbody.innerHTML = works.map(r => `
@@ -658,6 +865,7 @@
                 <td class="px-4 py-3 font-mono text-xs text-stone-400">${r.dl_rank ?? '—'}</td>
                 <td class="px-4 py-3 font-mono text-sm font-semibold text-[#1e3a6e]">${r.downloads ?? '&mdash;'}</td>
                 <td class="px-4 py-3 font-mono text-sm text-stone-600">${r.downloads_per_day ?? '&mdash;'}</td>
+                <td class="px-4 py-3 font-mono text-sm text-stone-600">${r.interestingness_rating ?? '&mdash;'}</td>
                 <td class="px-4 py-3 text-stone-800"><a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="${esc(r.handle_url)}" target="_blank" rel="noreferrer">${esc(r.title)}</a></td>
                 <td class="px-4 py-3 text-stone-600">${esc(r.author) || '&mdash;'}</td>
                 <td class="px-4 py-3 text-stone-600">${esc(r.work_type) || '&mdash;'}</td>

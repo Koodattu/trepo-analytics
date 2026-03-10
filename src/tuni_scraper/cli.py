@@ -2,8 +2,22 @@ import argparse
 import logging
 from pathlib import Path
 
-from tuni_scraper.config import DEFAULT_DB_PATH, DEFAULT_DELAY_SECONDS, DEFAULT_EXPORT_PATH, DEFAULT_MAX_OFFSET, DEFAULT_PAGE_SIZE
+from dotenv import load_dotenv
+
+from tuni_scraper.config import (
+    DEFAULT_DB_PATH,
+    DEFAULT_DELAY_SECONDS,
+    DEFAULT_EXPORT_PATH,
+    DEFAULT_LLM_BATCH_SIZE,
+    DEFAULT_LLM_MAX_RETRIES,
+    DEFAULT_MAX_OFFSET,
+    DEFAULT_OPENAI_MODEL,
+    DEFAULT_PAGE_SIZE,
+    OPENAI_MODEL_ENV,
+    PROJECT_ROOT,
+)
 from tuni_scraper.database import Database
+from tuni_scraper.llm_rating import run_interest_rating
 from tuni_scraper.reports import render_table
 from tuni_scraper.scraper import run_scrape
 from tuni_scraper.web import create_app
@@ -11,6 +25,10 @@ from tuni_scraper.web import create_app
 
 def configure_logging() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+
+def configure_environment() -> None:
+    load_dotenv(PROJECT_ROOT / ".env")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,6 +51,39 @@ def build_parser() -> argparse.ArgumentParser:
 
     export_parser = subparsers.add_parser("export-json", help="Export all stored records to JSON.")
     export_parser.add_argument("--output", type=Path, default=DEFAULT_EXPORT_PATH, help="JSON export path.")
+
+    rate_parser = subparsers.add_parser(
+        "rate-interest",
+        help="Use OpenAI to rate publication titles by how unusually interesting they sound.",
+    )
+    rate_parser.add_argument(
+        "--model",
+        default=None,
+        help=f"OpenAI model. Defaults to ${OPENAI_MODEL_ENV} or {DEFAULT_OPENAI_MODEL}.",
+    )
+    rate_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=DEFAULT_LLM_BATCH_SIZE,
+        help="Number of publication titles to send in each OpenAI request.",
+    )
+    rate_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum number of publications to rate during this run.",
+    )
+    rate_parser.add_argument(
+        "--rerate",
+        action="store_true",
+        help="Include publications that already have an interestingness rating.",
+    )
+    rate_parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=DEFAULT_LLM_MAX_RETRIES,
+        help="Retry count for invalid or incomplete structured model responses.",
+    )
 
     reset_parser = subparsers.add_parser("reset-progress", help="Reset the saved scraping offset.")
     reset_parser.add_argument("--offset", type=int, default=0, help="Offset to store as the next page to scrape.")
@@ -88,6 +139,7 @@ def print_report(database: Database, limit: int) -> None:
 
 
 def main() -> None:
+    configure_environment()
     configure_logging()
     parser = build_parser()
     args = parser.parse_args()
@@ -118,6 +170,21 @@ def main() -> None:
     if args.command == "export-json":
         database.export_json(args.output)
         print(f"Exported data to {args.output}")
+        return
+
+    if args.command == "rate-interest":
+        result = run_interest_rating(
+            database=database,
+            model=args.model,
+            batch_size=args.batch_size,
+            limit=args.limit,
+            include_rated=args.rerate,
+            max_retries=args.max_retries,
+        )
+        print(f"Model: {result.model}")
+        print(f"Works considered: {result.works_considered}")
+        print(f"Works rated: {result.works_rated}")
+        print(f"Batches sent: {result.batches_sent}")
         return
 
     if args.command == "reset-progress":

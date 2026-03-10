@@ -46,6 +46,18 @@ Export current data to JSON:
 trepo-scraper export-json --output data/publications.json
 ```
 
+Use OpenAI once to rate titles by how unusually interesting they sound:
+
+```powershell
+trepo-scraper rate-interest --batch-size 100
+```
+
+Rate only a subset while testing the prompt:
+
+```powershell
+trepo-scraper rate-interest --limit 200 --batch-size 50
+```
+
 Reset progress back to the beginning:
 
 ```powershell
@@ -69,6 +81,7 @@ It stores:
 - author
 - year
 - type
+- interestingness rating from OpenAI, based on title only
 - handle URL
 - download count when present
 
