@@ -72,18 +72,19 @@ trepo-scraper serve --host 127.0.0.1 --port 5000
 
 ## Docker
 
-Build the image:
+Start the container with Docker Compose:
 
 ```powershell
-docker build -t trepo-analytics .
+docker compose up --build -d
 ```
 
-Run the container on a VM:
+Stop it again:
 
 ```powershell
-docker run -d --name trepo-analytics -p 5000:5000 trepo-analytics
+docker compose down
 ```
 
+The Compose setup builds the local Dockerfile, starts a single container named `trepo-analytics`, and publishes it only on `127.0.0.1:5000` so a host Nginx can reverse proxy it safely.
 The image includes the current `data/trepo_scraper.db` file and serves the Flask dashboard with Gunicorn at `http://localhost:5000`.
 If you want to point the container at a different SQLite file later, pass `-e TUNI_SCRAPER_DB_PATH=/app/data/your.db`.
 
