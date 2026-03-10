@@ -150,6 +150,15 @@ class Database:
     ) -> None:
         self.save_progress(offset, max_offset, page_size)
 
+    def has_work(self, handle_url: str) -> bool:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT 1 FROM works WHERE handle_url = ?",
+                (handle_url,),
+            ).fetchone()
+
+        return row is not None
+
     def upsert_work(self, record: PublicationRecord) -> None:
         timestamp = utc_now_iso()
         with self._connect() as connection:
@@ -230,13 +239,22 @@ class Database:
         self,
         limit: int | None = None,
         include_rated: bool = False,
+        handle_urls: Sequence[str] | None = None,
     ) -> list[sqlite3.Row]:
+        if handle_urls is not None and not handle_urls:
+            return []
+
         query = """
             SELECT handle_url, title, interestingness_rating
             FROM works
             WHERE title IS NOT NULL AND TRIM(title) != ''
         """
         params: list[object] = []
+
+        if handle_urls is not None:
+            placeholders = ", ".join("?" for _ in handle_urls)
+            query += f" AND handle_url IN ({placeholders})"
+            params.extend(handle_urls)
 
         if not include_rated:
             query += " AND interestingness_rating IS NULL"

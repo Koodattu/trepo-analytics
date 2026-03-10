@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from openai import OpenAI
@@ -136,6 +137,7 @@ def run_interest_rating(
     limit: int | None = None,
     include_rated: bool = False,
     max_retries: int = DEFAULT_LLM_MAX_RETRIES,
+    handle_urls: Sequence[str] | None = None,
 ) -> InterestRatingResult:
     if batch_size <= 0:
         raise ValueError("batch_size must be greater than zero")
@@ -148,7 +150,11 @@ def run_interest_rating(
         raise RuntimeError(f"{OPENAI_API_KEY_ENV} is not set. Add it to the environment or the project .env file.")
 
     resolved_model = model or os.getenv(OPENAI_MODEL_ENV) or DEFAULT_OPENAI_MODEL
-    rows = database.get_works_for_interest_rating(limit=limit, include_rated=include_rated)
+    rows = database.get_works_for_interest_rating(
+        limit=limit,
+        include_rated=include_rated,
+        handle_urls=handle_urls,
+    )
     if not rows:
         return InterestRatingResult(
             model=resolved_model,

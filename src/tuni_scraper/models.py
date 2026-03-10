@@ -26,6 +26,8 @@ class ScrapeProgress:
 class ScrapeResult:
     pages_processed: int
     works_seen: int
+    new_works: int
     detail_requests: int
     detail_updates: int
     ending_offset: int
+    new_handles: tuple[str, ...]

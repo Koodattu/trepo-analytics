@@ -70,6 +70,22 @@ Start the dashboard:
 trepo-scraper serve --host 127.0.0.1 --port 5000
 ```
 
+## Docker
+
+Build the image:
+
+```powershell
+docker build -t trepo-analytics .
+```
+
+Run the container on a VM:
+
+```powershell
+docker run -d --name trepo-analytics -p 5000:5000 trepo-analytics
+```
+
+The image includes the current `data/trepo_scraper.db` file and serves the Flask dashboard with Gunicorn at `http://localhost:5000`.
+
 ## Stored data
 
 The SQLite database lives at `data/trepo_scraper.db` by default.

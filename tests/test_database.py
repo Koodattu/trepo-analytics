@@ -84,3 +84,21 @@ def test_search_works_preserves_global_rank_when_filtered(tmp_path: Path) -> Non
     assert len(rows) == 1
     assert rows[0]["title"] == "Beta"
     assert rows[0]["sort_rank"] == 2
+
+
+def test_get_works_for_interest_rating_can_filter_to_specific_handles(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    database.upsert_work(
+        PublicationRecord(
+            handle_url="https://example.test/4",
+            title="Delta",
+            author="Author D",
+            year=2025,
+            work_type="Thesis",
+        )
+    )
+
+    rows = database.get_works_for_interest_rating(handle_urls=["https://example.test/4", "https://example.test/2"])
+
+    assert [row["handle_url"] for row in rows] == ["https://example.test/4"]

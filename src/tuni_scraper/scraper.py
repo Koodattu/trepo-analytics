@@ -88,13 +88,22 @@ def run_scrape(
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
     limit_pages: int | None = None,
     refresh_downloads: bool = False,
+    stop_on_known_page: bool = False,
+    persist_progress: bool = True,
 ) -> ScrapeResult:
-    progress = database.get_progress(max_offset=max_offset, page_size=page_size)
-    current_offset = start_offset if start_offset is not None else progress.next_offset
+    if start_offset is not None:
+        current_offset = start_offset
+    elif persist_progress:
+        progress = database.get_progress(max_offset=max_offset, page_size=page_size)
+        current_offset = progress.next_offset
+    else:
+        current_offset = 0
+
     session = build_session()
 
     pages_processed = 0
     works_seen = 0
+    new_handles: list[str] = []
     detail_requests = 0
     detail_updates = 0
 
@@ -111,12 +120,21 @@ def run_scrape(
             break
 
         publications = parse_recent_submissions(html, base_url=BASE_URL)
+        page_contains_only_known_works = bool(publications)
 
         for publication in publications:
             publication.listing_offset = current_offset
             publication.listing_url = listing_url
+            already_seen = database.has_work(publication.handle_url)
             database.upsert_work(publication)
             works_seen += 1
+
+            if already_seen:
+                if stop_on_known_page:
+                    continue
+            else:
+                page_contains_only_known_works = False
+                new_handles.append(publication.handle_url)
 
             if not refresh_downloads and not database.needs_detail_fetch(publication.handle_url):
                 continue
@@ -152,7 +170,13 @@ def run_scrape(
 
         pages_processed += 1
         current_offset += page_size
-        database.save_progress(current_offset, max_offset, page_size)
+
+        if persist_progress:
+            database.save_progress(current_offset, max_offset, page_size)
+
+        if stop_on_known_page and page_contains_only_known_works:
+            LOGGER.info("Encountered a recent submissions page with only known publications at offset %s.", current_offset - page_size)
+            break
 
         if delay_seconds > 0 and current_offset <= max_offset:
             time.sleep(delay_seconds)
@@ -160,7 +184,9 @@ def run_scrape(
     return ScrapeResult(
         pages_processed=pages_processed,
         works_seen=works_seen,
+        new_works=len(new_handles),
         detail_requests=detail_requests,
         detail_updates=detail_updates,
         ending_offset=current_offset,
+        new_handles=tuple(new_handles),
     )
