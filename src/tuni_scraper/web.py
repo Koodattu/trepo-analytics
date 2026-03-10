@@ -6,7 +6,7 @@ from tuni_scraper.config import DEFAULT_DB_PATH
 from tuni_scraper.database import Database
 
 
-VALID_SORT_FIELDS = {"downloads", "downloads_per_day", "rank", "interest", "accepted"}
+VALID_SORT_FIELDS = {"downloads", "downloads_per_day", "interest", "accepted"}
 VALID_SORT_DIRECTIONS = {"asc", "desc"}
 
 
@@ -50,6 +50,13 @@ def build_work_filters() -> dict[str, str | int | None]:
     }
 
 
+def build_random_gems_payload(database: Database) -> dict[str, list[dict[str, object]]]:
+    return {
+        "interesting": [dict(row) for row in database.get_random_interesting_works(3, 80)],
+        "signal_rich": [dict(row) for row in database.get_random_signal_rich_works(3, 90)],
+    }
+
+
 def create_app(db_path: Path = DEFAULT_DB_PATH) -> Flask:
     app = Flask(__name__, template_folder="templates")
     app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -59,6 +66,7 @@ def create_app(db_path: Path = DEFAULT_DB_PATH) -> Flask:
     @app.route("/")
     def index() -> str:
         filters = build_work_filters()
+        random_gems = build_random_gems_payload(database)
 
         works = database.search_works(
             title=filters["title"] or None,
@@ -83,6 +91,8 @@ def create_app(db_path: Path = DEFAULT_DB_PATH) -> Flask:
         return render_template(
             "index.html",
             overview=database.get_overview(),
+            random_interesting=random_gems["interesting"],
+            random_signal_rich=random_gems["signal_rich"],
             top_downloads=database.get_top_downloads(10),
             top_trending=database.get_top_by_downloads_per_day(10),
             top_interesting=database.get_top_by_interestingness(10),
@@ -118,5 +128,9 @@ def create_app(db_path: Path = DEFAULT_DB_PATH) -> Flask:
             limit=filters["limit"],
         )
         return jsonify({"works": [dict(row) for row in works]})
+
+    @app.route("/api/random-gems")
+    def api_random_gems():
+        return jsonify(build_random_gems_payload(database))
 
     return app

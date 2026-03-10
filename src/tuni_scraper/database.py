@@ -11,16 +11,38 @@ from tuni_scraper.models import PublicationRecord, ScrapeProgress
 PROGRESS_KEY = "recent_submissions"
 
 WORK_SORT_FIELDS = {
-    "downloads": "COALESCE(w.downloads, -1)",
-    "downloads_per_day": "COALESCE(downloads_per_day, -1)",
-    "rank": "COALESCE(r.dl_rank, 2147483647)",
-    "interest": "COALESCE(w.interestingness_rating, -1)",
-    "accepted": "COALESCE(date(w.accepted_date), '')",
+    "downloads": {
+        "sort_expr": "COALESCE(downloads, -1)",
+        "rank_expr": "downloads",
+        "missing_expr": "downloads IS NULL",
+    },
+    "downloads_per_day": {
+        "sort_expr": "COALESCE(downloads_per_day, -1)",
+        "rank_expr": "downloads_per_day",
+        "missing_expr": "downloads_per_day IS NULL",
+    },
+    "interest": {
+        "sort_expr": "COALESCE(interestingness_rating, -1)",
+        "rank_expr": "interestingness_rating",
+        "missing_expr": "interestingness_rating IS NULL",
+    },
+    "accepted": {
+        "sort_expr": "COALESCE(date(accepted_date), '')",
+        "rank_expr": "date(accepted_date)",
+        "missing_expr": "accepted_date IS NULL OR accepted_date = ''",
+    },
 }
 
 
 def utc_now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
+
+
+def format_year_month_label(year_month: str | None) -> str | None:
+    if not year_month:
+        return None
+
+    return datetime.strptime(year_month, "%Y-%m").strftime("%b %Y")
 
 
 class Database:
@@ -251,16 +273,34 @@ class Database:
             """
             SELECT
                 COUNT(*) AS total_publications,
-                COUNT(downloads) AS publications_with_downloads,
-                COALESCE(SUM(downloads), 0) AS total_downloads
+                COALESCE(SUM(downloads), 0) AS total_downloads,
+                ROUND(COALESCE(AVG(COALESCE(downloads, 0)), 0), 1) AS average_downloads_per_work,
+                (
+                    SELECT year
+                    FROM works
+                    WHERE year IS NOT NULL AND year > 0
+                    GROUP BY year
+                    ORDER BY COUNT(*) DESC, year DESC
+                    LIMIT 1
+                ) AS busiest_year,
+                (
+                    SELECT strftime('%Y-%m', accepted_date)
+                    FROM works
+                    WHERE accepted_date IS NOT NULL AND accepted_date != ''
+                    GROUP BY strftime('%Y-%m', accepted_date)
+                    ORDER BY COUNT(*) DESC, strftime('%Y-%m', accepted_date) DESC
+                    LIMIT 1
+                ) AS peak_month
             FROM works
             """
         )
         progress = self.get_progress()
         return {
             "total_publications": row["total_publications"] if row else 0,
-            "publications_with_downloads": row["publications_with_downloads"] if row else 0,
             "total_downloads": row["total_downloads"] if row else 0,
+            "average_downloads_per_work": row["average_downloads_per_work"] if row else 0,
+            "busiest_year": row["busiest_year"] if row else None,
+            "peak_month": format_year_month_label(row["peak_month"]) if row else None,
             "next_offset": progress.next_offset,
             "max_offset": progress.max_offset,
             "page_size": progress.page_size,
@@ -458,6 +498,115 @@ class Database:
             (limit,),
         )
 
+    def get_random_interesting_works(
+        self, limit: int = 3, min_rating: int = 80
+    ) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            """
+            SELECT
+                title, author, year, work_type, interestingness_rating, downloads, handle_url, accepted_date,
+                CASE
+                    WHEN accepted_date IS NOT NULL
+                         AND downloads IS NOT NULL
+                         AND (julianday('now') - julianday(accepted_date)) > 0
+                    THEN ROUND(
+                        CAST(downloads AS REAL) / (julianday('now') - julianday(accepted_date)),
+                        2
+                    )
+                    ELSE NULL
+                END AS downloads_per_day
+            FROM works
+            WHERE interestingness_rating IS NOT NULL
+              AND interestingness_rating >= ?
+            ORDER BY RANDOM()
+            LIMIT ?
+            """,
+            (min_rating, limit),
+        )
+
+    def get_random_signal_rich_works(
+        self, limit: int = 3, min_score: float = 90.0
+    ) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            """
+            WITH ranked AS (
+                SELECT
+                    title,
+                    author,
+                    year,
+                    work_type,
+                    interestingness_rating,
+                    downloads,
+                    handle_url,
+                    accepted_date,
+                    CASE
+                        WHEN accepted_date IS NOT NULL
+                             AND downloads IS NOT NULL
+                             AND (julianday('now') - julianday(accepted_date)) > 0
+                        THEN ROUND(
+                            CAST(downloads AS REAL) / (julianday('now') - julianday(accepted_date)),
+                            2
+                        )
+                        ELSE NULL
+                    END AS downloads_per_day,
+                    ROW_NUMBER() OVER (
+                        ORDER BY downloads DESC, interestingness_rating DESC, title ASC
+                    ) AS download_rank,
+                    ROW_NUMBER() OVER (
+                        ORDER BY interestingness_rating DESC, downloads DESC, title ASC
+                    ) AS interest_rank,
+                    COUNT(*) OVER () AS candidate_count
+                FROM works
+                WHERE downloads IS NOT NULL
+                  AND downloads >= 5
+                  AND interestingness_rating IS NOT NULL
+            ),
+            scored AS (
+                SELECT
+                    title,
+                    author,
+                    year,
+                    work_type,
+                    interestingness_rating,
+                    downloads,
+                    handle_url,
+                    accepted_date,
+                    downloads_per_day,
+                    ROUND(
+                        CASE
+                            WHEN candidate_count = 0 THEN 0
+                            ELSE (
+                                2.0
+                                * ((candidate_count - download_rank + 1.0) / candidate_count)
+                                * ((candidate_count - interest_rank + 1.0) / candidate_count)
+                            ) / (
+                                ((candidate_count - download_rank + 1.0) / candidate_count)
+                                + ((candidate_count - interest_rank + 1.0) / candidate_count)
+                            ) * 100.0
+                        END,
+                        1
+                    ) AS signal_score
+                FROM ranked
+            )
+            SELECT
+                title,
+                author,
+                year,
+                work_type,
+                interestingness_rating,
+                downloads,
+                handle_url,
+                accepted_date,
+                downloads_per_day,
+                signal_score
+            FROM scored
+            WHERE signal_score >= ?
+            ORDER BY RANDOM()
+            LIMIT ?
+            """,
+            (min_score, limit),
+        )
+
     def get_top_authors(self, limit: int = 10) -> list[sqlite3.Row]:
         return self.fetch_rows(
             """
@@ -561,92 +710,114 @@ class Database:
         sort_direction: str = "desc",
         limit: int = 10,
     ) -> list[sqlite3.Row]:
-        # dl_rank is computed once across the entire works table via a CTE window
-        # function, then joined back so the rank reflects the global database order
-        # regardless of any filters applied below.
+        resolved_sort = WORK_SORT_FIELDS.get(sort_by, WORK_SORT_FIELDS["downloads"])
+        resolved_sort_direction = "ASC" if sort_direction.lower() == "asc" else "DESC"
+
         query = """
-            WITH dl_ranks AS (
-                SELECT handle_url,
-                       RANK() OVER (ORDER BY COALESCE(downloads, 0) DESC) AS dl_rank
-                FROM works
+            WITH scored AS (
+                SELECT
+                    w.handle_url,
+                    w.title,
+                    w.author,
+                    w.year,
+                    w.work_type,
+                    w.interestingness_rating,
+                    w.downloads,
+                    w.accepted_date,
+                    CASE
+                        WHEN w.accepted_date IS NOT NULL
+                             AND w.downloads IS NOT NULL
+                             AND (julianday('now') - julianday(w.accepted_date)) > 0
+                        THEN ROUND(
+                            CAST(w.downloads AS REAL) / (julianday('now') - julianday(w.accepted_date)),
+                            2
+                        )
+                        ELSE NULL
+                    END AS downloads_per_day
+                FROM works w
+            ), ranked AS (
+                SELECT
+                    scored.*,
+                    CASE
+                        WHEN {missing_expr} THEN NULL
+                        ELSE RANK() OVER (
+                            ORDER BY
+                                CASE WHEN {missing_expr} THEN 1 ELSE 0 END,
+                                {rank_expr} {sort_direction}
+                        )
+                    END AS sort_rank
+                FROM scored
             )
             SELECT
-                w.handle_url, w.title, w.author, w.year, w.work_type,
-                w.interestingness_rating, w.downloads, w.accepted_date,
-                r.dl_rank,
-                CASE
-                    WHEN w.accepted_date IS NOT NULL
-                         AND w.downloads IS NOT NULL
-                         AND (julianday('now') - julianday(w.accepted_date)) > 0
-                    THEN ROUND(
-                        CAST(w.downloads AS REAL) / (julianday('now') - julianday(w.accepted_date)),
-                        2
-                    )
-                    ELSE NULL
-                END AS downloads_per_day
-            FROM works w
-            JOIN dl_ranks r ON w.handle_url = r.handle_url
+                handle_url,
+                title,
+                author,
+                year,
+                work_type,
+                interestingness_rating,
+                downloads,
+                accepted_date,
+                sort_rank,
+                downloads_per_day
+            FROM ranked
             WHERE 1 = 1
         """
+        query = query.format(
+            missing_expr=resolved_sort["missing_expr"],
+            rank_expr=resolved_sort["rank_expr"],
+            sort_direction=resolved_sort_direction,
+        )
         params: list[object] = []
 
         if title:
-            query += " AND w.title LIKE ? COLLATE NOCASE"
+            query += " AND title LIKE ? COLLATE NOCASE"
             params.append(f"%{title}%")
 
         if author:
-            query += " AND w.author LIKE ? COLLATE NOCASE"
+            query += " AND author LIKE ? COLLATE NOCASE"
             params.append(f"%{author}%")
 
         if year is not None:
-            query += " AND w.year = ?"
+            query += " AND year = ?"
             params.append(year)
 
         if work_type:
             if work_type == "Unknown":
-                query += " AND COALESCE(w.work_type, 'Unknown') = 'Unknown'"
+                query += " AND COALESCE(work_type, 'Unknown') = 'Unknown'"
             else:
-                query += " AND w.work_type = ?"
+                query += " AND work_type = ?"
                 params.append(work_type)
 
         if min_downloads is not None:
-            query += " AND COALESCE(w.downloads, 0) >= ?"
+            query += " AND COALESCE(downloads, 0) >= ?"
             params.append(min_downloads)
 
         if max_downloads is not None:
-            query += " AND COALESCE(w.downloads, 0) <= ?"
+            query += " AND COALESCE(downloads, 0) <= ?"
             params.append(max_downloads)
 
         if min_interest is not None:
-            query += " AND w.interestingness_rating IS NOT NULL AND w.interestingness_rating >= ?"
+            query += " AND interestingness_rating IS NOT NULL AND interestingness_rating >= ?"
             params.append(min_interest)
 
         if max_interest is not None:
-            query += " AND w.interestingness_rating IS NOT NULL AND w.interestingness_rating <= ?"
+            query += " AND interestingness_rating IS NOT NULL AND interestingness_rating <= ?"
             params.append(max_interest)
 
         if accepted_start:
-            query += " AND w.accepted_date IS NOT NULL AND date(w.accepted_date) >= date(?)"
+            query += " AND accepted_date IS NOT NULL AND date(accepted_date) >= date(?)"
             params.append(accepted_start)
 
         if accepted_end:
-            query += " AND w.accepted_date IS NOT NULL AND date(w.accepted_date) <= date(?)"
+            query += " AND accepted_date IS NOT NULL AND date(accepted_date) <= date(?)"
             params.append(accepted_end)
 
-        resolved_sort_field = WORK_SORT_FIELDS.get(sort_by, WORK_SORT_FIELDS["downloads"])
-        resolved_sort_direction = "ASC" if sort_direction.lower() == "asc" else "DESC"
-
-        query += f"""
+        query += """
             ORDER BY
-                CASE
-                    WHEN '{sort_by}' = 'accepted' THEN CASE WHEN w.accepted_date IS NULL OR w.accepted_date = '' THEN 1 ELSE 0 END
-                    WHEN '{sort_by}' = 'downloads_per_day' THEN CASE WHEN downloads_per_day IS NULL THEN 1 ELSE 0 END
-                    WHEN '{sort_by}' = 'interest' THEN CASE WHEN w.interestingness_rating IS NULL THEN 1 ELSE 0 END
-                    ELSE CASE WHEN {resolved_sort_field} < 0 THEN 1 ELSE 0 END
-                END,
-                {resolved_sort_field} {resolved_sort_direction},
-                w.year DESC,
-                w.title ASC
+                CASE WHEN sort_rank IS NULL THEN 1 ELSE 0 END,
+                sort_rank ASC,
+                year DESC,
+                title ASC
             LIMIT ?
         """
         params.append(limit)
