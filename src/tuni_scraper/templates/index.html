@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TREPO Downloads Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>
+      body { font-family: 'Source Sans 3', system-ui, sans-serif; background-color: #f6f4ef; }
+      h1, h2, h3, .font-serif { font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; }
+      .stat-rule { border-top: 3px solid #1e3a6e; }
+    </style>
+  </head>
+  <body class="min-h-screen text-stone-800 antialiased">
+
+    <!-- Institutional top bar -->
+    <div class="border-b border-stone-300 bg-[#1e3a6e]">
+      <div class="mx-auto flex max-w-screen-2xl items-center justify-between px-4 py-2 sm:px-6 lg:px-8">
+        <span class="text-xs font-medium uppercase tracking-widest text-blue-200">Tampere University · Research Repository</span>
+        <span class="text-xs text-blue-300/60">TREPO Digital Archive</span>
+      </div>
+    </div>
+
+    <main class="w-full px-4 py-8 sm:px-6 lg:px-8">
+
+      <!-- Page header -->
+      <header class="mb-8 border-b-2 border-stone-300 pb-6">
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-[#1e3a6e]">Research Output Analytics</p>
+            <h1 class="font-serif text-4xl font-semibold leading-tight text-stone-900">Downloads Dashboard</h1>
+            <p class="mt-2 text-sm text-stone-500">Master's theses and publications indexed from the TREPO open-access repository.</p>
+          </div>
+          <p class="text-xs text-stone-400">Offset {{ overview.next_offset }}&thinsp;/&thinsp;{{ overview.max_offset }} &nbsp;·&nbsp; page&nbsp;size&nbsp;{{ overview.page_size }}</p>
+        </div>
+      </header>
+
+      <!-- Summary metrics -->
+      <section class="mb-8 grid gap-0 border border-stone-300 bg-white sm:grid-cols-2 xl:grid-cols-4">
+        <article class="stat-rule border-r border-stone-200 px-6 py-5 last:border-r-0">
+          <div class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Total publications</div>
+          <div class="mt-2 font-serif text-4xl font-bold text-stone-900">{{ overview.total_publications }}</div>
+        </article>
+        <article class="stat-rule border-r border-stone-200 px-6 py-5 last:border-r-0">
+          <div class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">With download data</div>
+          <div class="mt-2 font-serif text-4xl font-bold text-stone-900">{{ overview.publications_with_downloads }}</div>
+        </article>
+        <article class="stat-rule border-r border-stone-200 px-6 py-5 last:border-r-0">
+          <div class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Total downloads</div>
+          <div class="mt-2 font-serif text-4xl font-bold text-stone-900">{{ overview.total_downloads }}</div>
+        </article>
+        <article class="stat-rule px-6 py-5">
+          <div class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Results shown</div>
+          <div id="shownCount" class="mt-2 font-serif text-4xl font-bold text-stone-900">{{ works|length }}</div>
+        </article>
+      </section>
+
+      <!-- Top tables row: Most downloaded + Trending + Least downloaded + Least trending -->
+      <section class="mb-8 grid gap-5 xl:grid-cols-4">
+
+        <!-- Most downloaded -->
+        <article class="border border-stone-300 bg-white">
+          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
+            <h2 class="font-serif text-lg font-semibold text-stone-900">Most Downloaded</h2>
+            <p class="ml-4 mt-0.5 text-xs text-stone-400">Top 10 by downloads of all time</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL/day</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in top_downloads %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads }}</td>
+                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads_per_day if row.downloads_per_day is not none else '—' }}</td>
+                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-4 py-2.5 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No data available.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- Trending (top by DL/day) -->
+        <article class="border border-stone-300 bg-white">
+          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
+            <h2 class="font-serif text-lg font-semibold text-stone-900">Trending</h2>
+            <p class="ml-4 mt-0.5 text-xs text-stone-400">Top 10 by downloads per day since acceptance</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL/day</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in top_trending %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads_per_day }}</td>
+                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads }}</td>
+                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-4 py-2.5 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No data available yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- Least downloaded -->
+        <article class="border border-stone-300 bg-white">
+          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
+            <h2 class="font-serif text-lg font-semibold text-stone-900">Least Downloaded</h2>
+            <p class="ml-4 mt-0.5 text-xs text-stone-400">Bottom 10 by all-time downloads</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL/day</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in least_downloads %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads }}</td>
+                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads_per_day if row.downloads_per_day is not none else '—' }}</td>
+                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-4 py-2.5 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No data available.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- Least trending -->
+        <article class="border border-stone-300 bg-white">
+          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
+            <h2 class="font-serif text-lg font-semibold text-stone-900">Dormant</h2>
+            <p class="ml-4 mt-0.5 text-xs text-stone-400">Bottom 10 by downloads per day</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL/day</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in least_trending %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-stone-500">{{ row.downloads_per_day }}</td>
+                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads }}</td>
+                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-4 py-2.5 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No data available yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- Visual overview charts with stat tables below each -->
+      <section class="mb-8 border border-stone-300 bg-white">
+        <div class="border-b-2 border-[#1e3a6e] px-5 py-3">
+          <h2 class="font-serif text-xl font-semibold text-stone-900">Visual overview</h2>
+        </div>
+        <div class="grid gap-0 divide-x divide-stone-200 sm:grid-cols-3">
+
+          <div class="px-5 py-5">
+            <p class="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Publications by year</p>
+            <div style="position:relative;height:140px"><canvas id="chartPubsByYear"></canvas></div>
+            <table class="mt-4 min-w-full text-left text-sm">
+              <thead class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 py-2 font-semibold">Year</th>
+                  <th class="border-b border-stone-200 py-2 font-semibold">Pubs.</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in publication_counts_by_year | reverse %}
+                <tr class="hover:bg-stone-50{% if loop.index > 5 %} overview-extra hidden{% endif %}">
+                  <td class="py-1.5 text-stone-700">{{ row.year }}</td>
+                  <td class="py-1.5 font-mono text-sm font-medium text-stone-800">{{ row.publication_count }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2" class="py-4 text-center text-xs italic text-stone-400">No data.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% if publication_counts_by_year | length > 5 %}
+            <button class="overview-toggle mt-2 text-[11px] font-semibold uppercase tracking-widest text-[#1e3a6e] hover:underline" data-expanded="false">Show all {{ publication_counts_by_year | length }} years ▾</button>
+            {% endif %}
+          </div>
+
+          <div class="px-5 py-5">
+            <p class="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Downloads by year</p>
+            <div style="position:relative;height:140px"><canvas id="chartDlByYear"></canvas></div>
+            <table class="mt-4 min-w-full text-left text-sm">
+              <thead class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 py-2 font-semibold">Year</th>
+                  <th class="border-b border-stone-200 py-2 font-semibold">DL</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in download_counts_by_year | reverse %}
+                <tr class="hover:bg-stone-50{% if loop.index > 5 %} overview-extra hidden{% endif %}">
+                  <td class="py-1.5 text-stone-700">{{ row.year }}</td>
+                  <td class="py-1.5 font-mono text-sm font-medium text-stone-800">{{ row.total_downloads }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2" class="py-4 text-center text-xs italic text-stone-400">No data.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% if download_counts_by_year | length > 5 %}
+            <button class="overview-toggle mt-2 text-[11px] font-semibold uppercase tracking-widest text-[#1e3a6e] hover:underline" data-expanded="false">Show all {{ download_counts_by_year | length }} years ▾</button>
+            {% endif %}
+          </div>
+
+          <div class="px-5 py-5">
+            <p class="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Work types</p>
+            <div style="position:relative;height:140px"><canvas id="chartTypes"></canvas></div>
+            <table class="mt-4 min-w-full text-left text-sm">
+              <thead class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 py-2 font-semibold">Type</th>
+                  <th class="border-b border-stone-200 py-2 font-semibold">Count</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in type_counts_overall %}
+                <tr class="hover:bg-stone-50{% if loop.index > 5 %} overview-extra hidden{% endif %}">
+                  <td class="py-1.5 text-stone-700">{{ row.work_type }}</td>
+                  <td class="py-1.5 font-mono text-sm font-medium text-stone-800">{{ row.publication_count }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2" class="py-4 text-center text-xs italic text-stone-400">No data.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% if type_counts_overall | length > 5 %}
+            <button class="overview-toggle mt-2 text-[11px] font-semibold uppercase tracking-widest text-[#1e3a6e] hover:underline" data-expanded="false">Show all {{ type_counts_overall | length }} types ▾</button>
+            {% endif %}
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Publications by month chart -->
+      <section class="mb-8 border border-stone-300 bg-white">
+        <div class="flex flex-wrap items-center gap-3 border-b-2 border-[#1e3a6e] px-5 py-3">
+          <h2 class="font-serif text-xl font-semibold text-stone-900">Submissions by month</h2>
+          {% if pub_counts_by_month %}
+          <div id="monthRangeButtons" class="ml-auto flex gap-1">
+            <button data-range="1"  class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">Last year</button>
+            <button data-range="5"  class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">5 years</button>
+            <button data-range="10" class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">10 years</button>
+            <button data-range="15" class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">15 years</button>
+            <button data-range="20" class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">20 years</button>
+            <button data-range="25" class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">25 years</button>
+            <button data-range="0"  class="month-range-btn px-3 py-1 text-xs font-semibold uppercase tracking-widest border border-stone-300 text-stone-500 hover:border-[#1e3a6e] hover:text-[#1e3a6e]">All</button>
+          </div>
+          {% endif %}
+        </div>
+        <div class="px-5 py-5">
+          {% if pub_counts_by_month %}
+          <div style="position:relative;height:220px"><canvas id="chartPubsByMonth"></canvas></div>
+          {% else %}
+          <p class="py-8 text-center text-sm italic text-stone-400">No accepted-date data available yet. Run the scraper to populate.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <script>
+        // Shared utility — must be module-scope so both script blocks can use it
+        function fmtDate(iso) {
+          if (!iso || iso === '—') return '—';
+          const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          return m ? m[3] + '.' + m[2] + '.' + m[1] : iso;
+        }
+        // Format all server-rendered date cells after the full DOM is parsed
+        document.addEventListener('DOMContentLoaded', function () {
+          document.querySelectorAll('.fmt-date').forEach(el => {
+            el.textContent = fmtDate(el.textContent.trim());
+          });
+
+          // Overview table expand/collapse
+          document.querySelectorAll('.overview-toggle').forEach(btn => {
+            btn.addEventListener('click', function () {
+              const expanded = this.dataset.expanded === 'true';
+              const table = this.previousElementSibling;
+              table.querySelectorAll('.overview-extra').forEach(row => {
+                row.classList.toggle('hidden', expanded);
+              });
+              this.dataset.expanded = expanded ? 'false' : 'true';
+              // Update label: pull the total count from the existing text
+              const match = this.textContent.match(/\d+\s+(\w+)/);
+              const noun = match ? match[1] : 'rows';
+              const total = this.textContent.match(/\d+/)[0];
+              this.textContent = expanded
+                ? `Show all ${total} ${noun} ▾`
+                : `Show fewer ▴`;
+            });
+          });
+        });
+      </script>
+
+      <script>
+        (function () {
+          const NAVY   = '#1e3a6e';
+          const ACCENT = '#4a6fa5';
+          const MUTED  = '#7b96bb';
+          const PIE_PALETTE = [
+            '#1e3a6e','#2e5496','#4a6fa5','#6b8db5','#8faabf',
+            '#b0c3d0','#c9d8e0','#dce7ec','#edf3f6','#f5f8fa',
+          ];
+          const baseFont = { family: "'Source Sans 3', system-ui, sans-serif", size: 12 };
+          Chart.defaults.font = baseFont;
+          Chart.defaults.color = '#78716c';
+
+          const pubYears = {{ publication_counts_by_year | map(attribute='year') | list | tojson }};
+          const pubCounts = {{ publication_counts_by_year | map(attribute='publication_count') | list | tojson }};
+
+          const dlYears = {{ download_counts_by_year | map(attribute='year') | list | tojson }};
+          const dlCounts = {{ download_counts_by_year | map(attribute='total_downloads') | list | tojson }};
+
+          const typeLabels = {{ type_counts_overall | map(attribute='work_type') | list | tojson }};
+          const typeCounts = {{ type_counts_overall | map(attribute='publication_count') | list | tojson }};
+
+          const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const rawMonthData = {{ pub_counts_by_month | tojson }};
+
+          // Build full dense series from raw data
+          const allMonthLabels = [];
+          const allMonthCounts = [];
+          if (rawMonthData.length) {
+            const minYear = rawMonthData[0].year;
+            const maxYear = rawMonthData[rawMonthData.length - 1].year;
+            const lookup = {};
+            rawMonthData.forEach(d => { lookup[d.year + '-' + d.month] = d.publication_count; });
+            for (let y = minYear; y <= maxYear; y++) {
+              for (let m = 1; m <= 12; m++) {
+                allMonthLabels.push(MONTH_NAMES[m - 1] + ' ' + y);
+                allMonthCounts.push(lookup[y + '-' + m] ?? 0);
+              }
+            }
+          }
+
+          // Render the month chart filtered to lastNYears (0 = all)
+          let monthChart = null;
+          function renderMonthChart(lastNYears) {
+            const monthCanvas = document.getElementById('chartPubsByMonth');
+            if (!monthCanvas || !allMonthLabels.length) return;
+
+            const sliceMonths = lastNYears > 0 ? lastNYears * 12 : allMonthLabels.length;
+            const labels = allMonthLabels.slice(-sliceMonths);
+            const counts = allMonthCounts.slice(-sliceMonths);
+
+            // Auto-skip: aim for at most ~20 visible x labels
+            const maxTicks = Math.min(20, labels.length);
+
+            if (monthChart) {
+              monthChart.data.labels = labels;
+              monthChart.data.datasets[0].data = counts;
+              monthChart.options.scales.x.ticks.maxTicksLimit = maxTicks;
+              monthChart.update();
+            } else {
+              monthChart = new Chart(monthCanvas, {
+                type: 'bar',
+                data: { labels, datasets: [{ label: 'Submissions', data: counts, backgroundColor: NAVY, borderRadius: 2 }] },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    x: {
+                      grid: { display: false },
+                      ticks: { font: baseFont, maxTicksLimit: maxTicks, maxRotation: 45, autoSkip: true },
+                    },
+                    y: { grid: { color: '#e7e5e4' }, ticks: { font: baseFont }, beginAtZero: true },
+                  },
+                },
+              });
+            }
+          }
+
+          // Wire up range buttons
+          const rangeButtons = document.querySelectorAll('.month-range-btn');
+          let activeRange = 0; // default: all
+          function setActiveRange(range) {
+            activeRange = range;
+            rangeButtons.forEach(btn => {
+              const active = parseInt(btn.dataset.range) === range;
+              btn.classList.toggle('bg-[#1e3a6e]', active);
+              btn.classList.toggle('text-white', active);
+              btn.classList.toggle('border-[#1e3a6e]', active);
+              btn.classList.toggle('text-stone-500', !active);
+            });
+            renderMonthChart(range);
+          }
+          rangeButtons.forEach(btn => {
+            btn.addEventListener('click', () => setActiveRange(parseInt(btn.dataset.range)));
+          });
+          setActiveRange(20);
+
+          const barOpts = () => ({
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, ticks: { font: baseFont } },
+              y: { grid: { color: '#e7e5e4' }, ticks: { font: baseFont }, beginAtZero: true },
+            },
+          });
+
+          new Chart(document.getElementById('chartPubsByYear'), {
+            type: 'bar',
+            data: { labels: pubYears, datasets: [{ label: 'Publications', data: pubCounts, backgroundColor: NAVY, borderRadius: 2 }] },
+            options: barOpts(),
+          });
+
+          new Chart(document.getElementById('chartDlByYear'), {
+            type: 'bar',
+            data: { labels: dlYears, datasets: [{ label: 'Downloads', data: dlCounts, backgroundColor: ACCENT, borderRadius: 2 }] },
+            options: barOpts(),
+          });
+
+          new Chart(document.getElementById('chartTypes'), {
+            type: 'doughnut',
+            data: { labels: typeLabels, datasets: [{ data: typeCounts, backgroundColor: PIE_PALETTE.slice(0, typeLabels.length), borderWidth: 1, borderColor: '#fff' }] },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom', labels: { font: baseFont, boxWidth: 10, padding: 8 } },
+              },
+            },
+          });
+
+          // Month chart is initialised above via setActiveRange(0)
+        })();
+      </script>
+
+      <!-- Search / filter -->
+      <section class="mb-8 border border-stone-300 bg-white px-5 py-5 sm:px-6">
+        <div class="flex items-start justify-between gap-3 border-b-2 border-[#1e3a6e] pb-3">
+          <div>
+            <h2 class="font-serif text-xl font-semibold text-stone-900">Search the database</h2>
+            <p class="mt-0.5 text-sm text-stone-500">Filter by title, author, year, type, and download range.</p>
+          </div>
+          <a href="/" class="mt-1 shrink-0 text-xs font-medium uppercase tracking-widest text-stone-400 underline-offset-2 hover:text-[#1e3a6e] hover:underline">Clear filters</a>
+        </div>
+        <form id="searchForm" class="mt-4 flex flex-wrap items-end gap-3">
+          <div class="min-w-48 flex-[2]">
+            <label for="title" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Title</label>
+            <input
+              id="title"
+              name="title"
+              type="text"
+              value="{{ filters.title }}"
+              placeholder="Search by title…"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            />
+          </div>
+          <div class="min-w-40 flex-[2]">
+            <label for="author" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Author</label>
+            <input
+              id="author"
+              name="author"
+              type="text"
+              value="{{ filters.author }}"
+              placeholder="Search by author…"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            />
+          </div>
+          <div class="min-w-24 flex-1">
+            <label for="year" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Year</label>
+            <select
+              id="year"
+              name="year"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            >
+              <option value="">All</option>
+              {% for year in available_years %}
+              <option value="{{ year }}" {{ 'selected' if filters.year|string == year|string else '' }}>
+                {{ year }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="min-w-32 flex-1">
+            <label for="work_type" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Type</label>
+            <select
+              id="work_type"
+              name="work_type"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            >
+              <option value="">All</option>
+              {% for work_type in available_types %}
+              <option value="{{ work_type }}" {{ 'selected' if filters.work_type == work_type else '' }}>
+                {{ work_type }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="min-w-28 flex-1">
+            <label for="min_downloads" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Min downloads</label>
+            <input
+              id="min_downloads"
+              name="min_downloads"
+              type="number"
+              min="0"
+              value="{{ filters.min_downloads if filters.min_downloads is not none else '' }}"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            />
+          </div>
+          <div class="min-w-28 flex-1">
+            <label for="max_downloads" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Max downloads</label>
+            <input
+              id="max_downloads"
+              name="max_downloads"
+              type="number"
+              min="0"
+              value="{{ filters.max_downloads if filters.max_downloads is not none else '' }}"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            />
+          </div>
+          <div class="min-w-24 flex-1">
+            <label for="limit" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Result limit</label>
+            <input
+              id="limit"
+              name="limit"
+              type="number"
+              min="1"
+              max="500"
+              value="{{ filters.limit }}"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+            />
+          </div>
+          <div class="shrink-0">
+            <button type="submit" class="border border-[#1e3a6e] bg-[#1e3a6e] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#162e58]">Apply filters</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Works table -->
+      <section class="border border-stone-300 bg-white">
+        <div class="flex items-center justify-between border-b-2 border-[#1e3a6e] px-5 py-3 sm:px-6">
+          <h2 class="font-serif text-xl font-semibold text-stone-900">Works</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-left text-sm">
+            <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+              <tr>
+                <th class="border-b border-stone-200 px-4 py-3 font-semibold">#</th>
+                <th class="border-b border-stone-200 px-4 py-3 font-semibold">Downloads</th>
+                <th class="border-b border-stone-200 px-4 py-3 font-semibold">DL&thinsp;/&thinsp;day</th>
+                <th class="border-b border-stone-200 px-4 py-3 font-semibold">Title</th>
+                <th class="border-b border-stone-200 px-4 py-3 font-semibold">Author</th>
+                <th class="border-b border-stone-200 px-4 py-3 font-semibold">Type</th>
+                <th class="border-b border-stone-200 px-4 py-3 font-semibold">Accepted</th>
+              </tr>
+            </thead>
+            <tbody id="worksBody" class="divide-y divide-stone-100">
+              {% for row in works %}
+              <tr class="hover:bg-stone-50">
+                <td class="px-4 py-3 font-mono text-xs text-stone-400">{{ row.dl_rank }}</td>
+                <td class="px-4 py-3 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads if row.downloads is not none else '—' }}</td>
+                <td class="px-4 py-3 font-mono text-sm text-stone-600">{{ row.downloads_per_day if row.downloads_per_day is not none else '—' }}</td>
+                <td class="px-4 py-3 text-stone-800">
+                  <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                </td>
+                <td class="px-4 py-3 text-stone-600">{{ row.author or '—' }}</td>
+                <td class="px-4 py-3 text-stone-600">{{ row.work_type or '—' }}</td>
+                <td class="px-4 py-3 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" class="px-4 py-12 text-center text-sm italic text-stone-400">No works match the current filters.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="mt-10 border-t border-stone-200 py-5 text-center text-xs text-stone-400">
+        TREPO scraper dashboard &mdash; local database view
+      </footer>
+
+      <script>
+        (function () {
+          const form = document.getElementById('searchForm');
+          const tbody = document.getElementById('worksBody');
+          const shownCount = document.getElementById('shownCount');
+
+          function esc(str) {
+            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+          }
+
+          function renderRows(works) {
+            if (!works.length) {
+              tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-12 text-center text-sm italic text-stone-400">No works match the current filters.</td></tr>';
+              return;
+            }
+            tbody.innerHTML = works.map(r => `
+              <tr class="hover:bg-stone-50">
+                <td class="px-4 py-3 font-mono text-xs text-stone-400">${r.dl_rank ?? '—'}</td>
+                <td class="px-4 py-3 font-mono text-sm font-semibold text-[#1e3a6e]">${r.downloads ?? '&mdash;'}</td>
+                <td class="px-4 py-3 font-mono text-sm text-stone-600">${r.downloads_per_day ?? '&mdash;'}</td>
+                <td class="px-4 py-3 text-stone-800"><a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="${esc(r.handle_url)}" target="_blank" rel="noreferrer">${esc(r.title)}</a></td>
+                <td class="px-4 py-3 text-stone-600">${esc(r.author) || '&mdash;'}</td>
+                <td class="px-4 py-3 text-stone-600">${esc(r.work_type) || '&mdash;'}</td>
+                <td class="px-4 py-3 tabular-nums text-stone-500">${fmtDate(r.accepted_date)}</td>
+              </tr>`).join('');
+          }
+
+          async function doSearch(event) {
+            if (event) event.preventDefault();
+            const params = new URLSearchParams(new FormData(form));
+            history.replaceState(null, '', '?' + params.toString());
+            try {
+              const res = await fetch('/api/works?' + params.toString());
+              const data = await res.json();
+              renderRows(data.works);
+              shownCount.textContent = data.works.length;
+            } catch (e) {
+              console.error('Search failed', e);
+            }
+          }
+
+          form.addEventListener('submit', doSearch);
+
+          // Live search on input fields with debounce
+          let debounceTimer;
+          form.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('input', () => {
+              clearTimeout(debounceTimer);
+              debounceTimer = setTimeout(doSearch, 300);
+            });
+          });
+        })();
+      </script>
+
+    </main>
+  </body>
+</html>
