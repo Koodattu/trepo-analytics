@@ -85,6 +85,7 @@ docker run -d --name trepo-analytics -p 5000:5000 trepo-analytics
 ```
 
 The image includes the current `data/trepo_scraper.db` file and serves the Flask dashboard with Gunicorn at `http://localhost:5000`.
+If you want to point the container at a different SQLite file later, pass `-e TUNI_SCRAPER_DB_PATH=/app/data/your.db`.
 
 ## Stored data
 
