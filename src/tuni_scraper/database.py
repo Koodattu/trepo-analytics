@@ -664,6 +664,33 @@ class Database:
             (min_score, limit),
         )
 
+    def get_random_interest_heavy_mismatch_works(
+        self, limit: int = 2, min_gap: float = 25.0, min_rating: int = 80
+    ) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            self._signal_scored_cte()
+            + """
+            SELECT
+                title,
+                author,
+                year,
+                work_type,
+                interestingness_rating,
+                downloads,
+                handle_url,
+                accepted_date,
+                downloads_per_day,
+                signal_score,
+                ROUND(interest_percentile - download_percentile, 1) AS gap_score
+            FROM scored
+            WHERE interestingness_rating >= ?
+              AND (interest_percentile - download_percentile) >= ?
+            ORDER BY RANDOM()
+            LIMIT ?
+            """,
+            (min_rating, min_gap, limit),
+        )
+
     def get_interest_bucket_summary(self) -> list[sqlite3.Row]:
         return self.fetch_rows(
             """

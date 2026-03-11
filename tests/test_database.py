@@ -102,3 +102,12 @@ def test_get_works_for_interest_rating_can_filter_to_specific_handles(tmp_path: 
     rows = database.get_works_for_interest_rating(handle_urls=["https://example.test/4", "https://example.test/2"])
 
     assert [row["handle_url"] for row in rows] == ["https://example.test/4"]
+
+
+def test_get_random_interest_heavy_mismatch_works_returns_hidden_gems(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    rows = database.get_random_interest_heavy_mismatch_works(limit=5, min_gap=20.0, min_rating=80)
+
+    assert [row["title"] for row in rows] == ["Beta"]
+    assert rows[0]["gap_score"] > 0

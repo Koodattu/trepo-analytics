@@ -52,8 +52,12 @@ def build_work_filters() -> dict[str, str | int | None]:
 
 def build_random_gems_payload(database: Database) -> dict[str, list[dict[str, object]]]:
     return {
-        "interesting": [dict(row) for row in database.get_random_interesting_works(3, 80)],
-        "signal_rich": [dict(row) for row in database.get_random_signal_rich_works(3, 90)],
+        "interesting": [dict(row) for row in database.get_random_interesting_works(2, 80)],
+        "signal_rich": [dict(row) for row in database.get_random_signal_rich_works(2, 90)],
+        "interest_heavy_mismatch": [
+            dict(row)
+            for row in database.get_random_interest_heavy_mismatch_works(2, 25.0, 80)
+        ],
     }
 
 
@@ -93,6 +97,7 @@ def create_app(db_path: Path = DEFAULT_DB_PATH) -> Flask:
             overview=database.get_overview(),
             random_interesting=random_gems["interesting"],
             random_signal_rich=random_gems["signal_rich"],
+            random_interest_heavy_mismatch=random_gems["interest_heavy_mismatch"],
             top_downloads=database.get_top_downloads(10),
             top_trending=database.get_top_by_downloads_per_day(10),
             top_interesting=database.get_top_by_interestingness(10),

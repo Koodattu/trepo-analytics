@@ -63,14 +63,14 @@
         </article>
       </section>
 
-      {% if random_interesting or random_signal_rich %}
+      {% if random_interesting or random_signal_rich or random_interest_heavy_mismatch %}
       <section class="mb-8 border border-stone-300 bg-white">
         <div class="flex flex-col gap-3 border-b-2 border-[#1e3a6e] px-5 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
             <h2 class="font-serif text-xl font-semibold text-stone-900">Random Gems</h2>
-            <p class="text-sm text-stone-500">Six fresh picks from high-interest and high-signal works.</p>
+            <p class="text-sm text-stone-500">Six fresh picks: 2 interest gems, 2 signal picks, and 2 interest-heavy mismatch finds.</p>
           </div>
-          <button id="refreshRandomGems" type="button" class="inline-flex items-center justify-center border border-[#1e3a6e] bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-[#1e3a6e] transition-colors hover:bg-[#1e3a6e] hover:text-white">Refresh picks</button>
+          <button id="refreshRandomGems" type="button" class="inline-flex items-center justify-center border border-[#1e3a6e] bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-[#1e3a6e] transition-colors hover:bg-[#1e3a6e] hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-100 disabled:text-stone-400 disabled:hover:bg-stone-100 disabled:hover:text-stone-400">Refresh picks</button>
         </div>
         <div id="randomGemsGrid" class="grid gap-4 px-5 py-5 sm:grid-cols-2 xl:grid-cols-6">
           {% for row in random_interesting %}
@@ -118,6 +118,29 @@
             </div>
           </article>
           {% endfor %}
+
+          {% for row in random_interest_heavy_mismatch %}
+          <article class="flex min-h-52 flex-col border border-stone-200 bg-stone-50 px-4 py-4">
+            <div class="mb-3 flex items-start justify-between gap-3">
+              <span class="inline-flex items-center border border-amber-700/20 bg-amber-700/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800">Interest-heavy mismatch</span>
+              <span class="font-mono text-sm font-semibold text-amber-800">{{ row.gap_score }}</span>
+            </div>
+            <h3 class="font-serif text-lg leading-snug text-stone-900">
+              <a class="underline decoration-stone-300 underline-offset-2 hover:decoration-amber-800" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+            </h3>
+            <p class="mt-3 text-sm text-stone-600">{{ row.author or 'Unknown author' }}</p>
+            <div class="mt-auto grid gap-2 pt-4 text-sm text-stone-600">
+              <div class="flex items-center justify-between gap-3 border-t border-stone-200 pt-2">
+                <span>Accepted</span>
+                <span class="fmt-date tabular-nums text-stone-800">{{ row.accepted_date or '—' }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span>Downloads</span>
+                <span class="font-mono text-stone-800">{{ row.downloads if row.downloads is not none else '—' }}</span>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
         </div>
       </section>
       {% endif %}
@@ -125,7 +148,7 @@
       <!-- Compact top ranking grid -->
       <section class="mb-6 grid gap-4 xl:grid-cols-3">
 
-        <article class="border border-stone-300 bg-white">
+        <article class="order-3 border border-stone-300 bg-white">
           <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
             <h2 class="font-serif text-base font-semibold text-stone-900">Most Downloaded</h2>
             <p class="ml-3 text-[11px] text-stone-400">Top 10 by all-time downloads</p>
@@ -146,7 +169,7 @@
                   <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads_per_day if row.downloads_per_day is not none else '—' }}</td>
                   <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-3 py-2 text-stone-700">
+                  <td class="px-3 py-2 text-sm leading-snug text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
@@ -160,7 +183,7 @@
           </div>
         </article>
 
-        <article class="border border-stone-300 bg-white">
+        <article class="order-1 border border-stone-300 bg-white">
           <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
             <h2 class="font-serif text-base font-semibold text-stone-900">Trending</h2>
             <p class="ml-3 text-[11px] text-stone-400">Top 10 by downloads per day</p>
@@ -181,7 +204,7 @@
                   <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads_per_day }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads }}</td>
                   <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-3 py-2 text-stone-700">
+                  <td class="px-3 py-2 text-sm leading-snug text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
@@ -195,7 +218,7 @@
           </div>
         </article>
 
-        <article class="border border-stone-300 bg-white">
+        <article class="order-4 border border-stone-300 bg-white">
           <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
             <h2 class="font-serif text-base font-semibold text-stone-900">Most Interesting</h2>
             <p class="ml-3 text-[11px] text-stone-400">Top 10 by interest rating</p>
@@ -216,7 +239,7 @@
                   <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
                   <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-3 py-2 text-stone-700">
+                  <td class="px-3 py-2 text-sm leading-snug text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
@@ -230,7 +253,7 @@
           </div>
         </article>
 
-        <article class="border border-stone-300 bg-white">
+        <article class="order-7 border border-stone-300 bg-white">
           <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
             <h2 class="font-serif text-base font-semibold text-stone-900">Dormant</h2>
             <p class="ml-3 text-[11px] text-stone-400">Bottom 10 by downloads per day</p>
@@ -251,7 +274,7 @@
                   <td class="px-3 py-2 font-mono text-sm font-semibold text-stone-500">{{ row.downloads_per_day }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads }}</td>
                   <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-3 py-2 text-stone-700">
+                  <td class="px-3 py-2 text-sm leading-snug text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
@@ -265,7 +288,7 @@
           </div>
         </article>
 
-        <article class="border border-stone-300 bg-white">
+        <article class="order-2 border border-stone-300 bg-white">
           <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
             <h2 class="font-serif text-base font-semibold text-stone-900">Signal-Rich Picks</h2>
             <p class="ml-3 text-[11px] text-stone-400">Best combined download and interest fit</p>
@@ -286,7 +309,7 @@
                   <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.signal_score if row.signal_score is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
-                  <td class="px-3 py-2 text-stone-700">
+                  <td class="px-3 py-2 text-sm leading-snug text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
@@ -300,7 +323,7 @@
           </div>
         </article>
 
-        <article class="border border-stone-300 bg-white">
+        <article class="order-9 border border-stone-300 bg-white">
           <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
             <h2 class="font-serif text-base font-semibold text-stone-900">Least Interesting</h2>
             <p class="ml-3 text-[11px] text-stone-400">Bottom 10 by interest rating</p>
@@ -321,7 +344,7 @@
                   <td class="px-3 py-2 font-mono text-sm font-semibold text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
                   <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-3 py-2 text-stone-700">
+                  <td class="px-3 py-2 text-sm leading-snug text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
@@ -335,7 +358,7 @@
           </div>
         </article>
 
-        <article class="border border-stone-300 bg-white">
+        <article class="order-8 border border-stone-300 bg-white">
           <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
             <h2 class="font-serif text-base font-semibold text-stone-900">Least Signal-Rich</h2>
             <p class="ml-3 text-[11px] text-stone-400">Weakest combined fit</p>
@@ -356,7 +379,7 @@
                   <td class="px-3 py-2 font-mono text-sm font-semibold text-stone-500">{{ row.signal_score if row.signal_score is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
-                  <td class="px-3 py-2 text-stone-700">
+                  <td class="px-3 py-2 text-sm leading-snug text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
@@ -370,7 +393,7 @@
           </div>
         </article>
 
-        <article class="border border-stone-300 bg-white">
+        <article class="order-6 border border-stone-300 bg-white">
           <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
             <h2 class="font-serif text-base font-semibold text-stone-900">Download-Heavy Mismatch</h2>
             <p class="ml-3 text-[11px] text-stone-400">Popular works with weaker interest scores</p>
@@ -391,7 +414,7 @@
                   <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.gap_score if row.gap_score is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
-                  <td class="px-3 py-2 text-stone-700">
+                  <td class="px-3 py-2 text-sm leading-snug text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
@@ -405,7 +428,7 @@
           </div>
         </article>
 
-        <article class="border border-stone-300 bg-white">
+        <article class="order-5 border border-stone-300 bg-white">
           <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
             <h2 class="font-serif text-base font-semibold text-stone-900">Interest-Heavy Mismatch</h2>
             <p class="ml-3 text-[11px] text-stone-400">Strong titles with weaker download pull</p>
@@ -426,7 +449,7 @@
                   <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.gap_score if row.gap_score is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
                   <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
-                  <td class="px-3 py-2 text-stone-700">
+                  <td class="px-3 py-2 text-sm leading-snug text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
@@ -613,24 +636,39 @@
           }
 
           function renderRandomGemCard(row, kind) {
-            const isInterestGem = kind === 'interesting';
-            const badgeClass = isInterestGem
-              ? 'border-[#1e3a6e]/20 bg-[#1e3a6e]/10 text-[#1e3a6e]'
-              : 'border-emerald-700/20 bg-emerald-700/10 text-emerald-800';
-            const badgeLabel = isInterestGem ? 'Interest gem' : 'Signal pick';
-            const badgeValue = isInterestGem
-              ? (row.interestingness_rating ?? '&mdash;')
-              : (row.signal_score ?? '&mdash;');
-            const linkHoverClass = isInterestGem ? 'hover:decoration-[#1e3a6e]' : 'hover:decoration-emerald-800';
+            const gemConfig = {
+              interesting: {
+                badgeClass: 'border-[#1e3a6e]/20 bg-[#1e3a6e]/10 text-[#1e3a6e]',
+                badgeLabel: 'Interest gem',
+                badgeValue: row.interestingness_rating ?? '&mdash;',
+                valueClass: 'text-[#1e3a6e]',
+                linkHoverClass: 'hover:decoration-[#1e3a6e]',
+              },
+              signal: {
+                badgeClass: 'border-emerald-700/20 bg-emerald-700/10 text-emerald-800',
+                badgeLabel: 'Signal pick',
+                badgeValue: row.signal_score ?? '&mdash;',
+                valueClass: 'text-emerald-800',
+                linkHoverClass: 'hover:decoration-emerald-800',
+              },
+              interest_heavy_mismatch: {
+                badgeClass: 'border-amber-700/20 bg-amber-700/10 text-amber-800',
+                badgeLabel: 'Interest-heavy mismatch',
+                badgeValue: row.gap_score ?? '&mdash;',
+                valueClass: 'text-amber-800',
+                linkHoverClass: 'hover:decoration-amber-800',
+              },
+            };
+            const config = gemConfig[kind] ?? gemConfig.interesting;
 
             return `
               <article class="flex min-h-52 flex-col border border-stone-200 bg-stone-50 px-4 py-4">
                 <div class="mb-3 flex items-start justify-between gap-3">
-                  <span class="inline-flex items-center border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${badgeClass}">${badgeLabel}</span>
-                  <span class="font-mono text-sm font-semibold ${isInterestGem ? 'text-[#1e3a6e]' : 'text-emerald-800'}">${badgeValue}</span>
+                  <span class="inline-flex items-center border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${config.badgeClass}">${config.badgeLabel}</span>
+                  <span class="font-mono text-sm font-semibold ${config.valueClass}">${config.badgeValue}</span>
                 </div>
                 <h3 class="font-serif text-lg leading-snug text-stone-900">
-                  <a class="underline decoration-stone-300 underline-offset-2 ${linkHoverClass}" href="${escHtml(row.handle_url)}" target="_blank" rel="noreferrer">${escHtml(row.title)}</a>
+                  <a class="underline decoration-stone-300 underline-offset-2 ${config.linkHoverClass}" href="${escHtml(row.handle_url)}" target="_blank" rel="noreferrer">${escHtml(row.title)}</a>
                 </h3>
                 <p class="mt-3 text-sm text-stone-600">${row.author ? escHtml(row.author) : 'Unknown author'}</p>
                 <div class="mt-auto grid gap-2 pt-4 text-sm text-stone-600">
@@ -646,13 +684,14 @@
               </article>`;
           }
 
-          function renderRandomGems(interesting, signalRich) {
+          function renderRandomGems(interesting, signalRich, interestHeavyMismatch) {
             const gemsGrid = document.getElementById('randomGemsGrid');
             if (!gemsGrid) return;
 
             const cards = [
               ...interesting.map(row => renderRandomGemCard(row, 'interesting')),
               ...signalRich.map(row => renderRandomGemCard(row, 'signal')),
+              ...interestHeavyMismatch.map(row => renderRandomGemCard(row, 'interest_heavy_mismatch')),
             ];
 
             gemsGrid.innerHTML = cards.length
@@ -663,6 +702,15 @@
           const refreshRandomGemsButton = document.getElementById('refreshRandomGems');
           if (refreshRandomGemsButton) {
             refreshRandomGemsButton.addEventListener('click', async function () {
+              if (refreshRandomGemsButton.disabled) {
+                return;
+              }
+
+              const defaultLabel = 'Refresh picks';
+              refreshRandomGemsButton.disabled = true;
+              refreshRandomGemsButton.setAttribute('aria-busy', 'true');
+              refreshRandomGemsButton.textContent = 'Refreshing...';
+
               try {
                 const response = await fetch('/api/random-gems');
                 if (!response.ok) {
@@ -670,9 +718,17 @@
                 }
 
                 const data = await response.json();
-                renderRandomGems(data.interesting ?? [], data.signal_rich ?? []);
+                renderRandomGems(
+                  data.interesting ?? [],
+                  data.signal_rich ?? [],
+                  data.interest_heavy_mismatch ?? []
+                );
               } catch (error) {
                 console.error('Random gems refresh failed', error);
+              } finally {
+                refreshRandomGemsButton.disabled = false;
+                refreshRandomGemsButton.removeAttribute('aria-busy');
+                refreshRandomGemsButton.textContent = defaultLabel;
               }
             });
           }
@@ -1165,7 +1221,7 @@
                 <td class="px-4 py-3 font-mono text-sm text-stone-600">{{ row.downloads if row.downloads is not none else '—' }}</td>
                 <td class="px-4 py-3 font-mono text-sm text-stone-600">{{ row.downloads_per_day if row.downloads_per_day is not none else '—' }}</td>
                 <td class="px-4 py-3 font-mono text-sm text-stone-600">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
-                <td class="px-4 py-3 text-stone-800">
+                <td class="px-4 py-3 text-[15px] leading-snug text-stone-800">
                   <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                 </td>
                 <td class="px-4 py-3 text-stone-600">{{ row.author or '—' }}</td>
@@ -1236,7 +1292,7 @@
                 <td class="px-4 py-3 font-mono text-sm text-stone-600">${r.downloads ?? '&mdash;'}</td>
                 <td class="px-4 py-3 font-mono text-sm text-stone-600">${r.downloads_per_day ?? '&mdash;'}</td>
                 <td class="px-4 py-3 font-mono text-sm text-stone-600">${r.interestingness_rating ?? '&mdash;'}</td>
-                <td class="px-4 py-3 text-stone-800"><a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="${esc(r.handle_url)}" target="_blank" rel="noreferrer">${esc(r.title)}</a></td>
+                <td class="px-4 py-3 text-[15px] leading-snug text-stone-800"><a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="${esc(r.handle_url)}" target="_blank" rel="noreferrer">${esc(r.title)}</a></td>
                 <td class="px-4 py-3 text-stone-600">${esc(r.author) || '&mdash;'}</td>
                 <td class="px-4 py-3 text-stone-600">${esc(r.work_type) || '&mdash;'}</td>
                 <td class="px-4 py-3 tabular-nums text-stone-500">${fmtDate(r.accepted_date)}</td>
