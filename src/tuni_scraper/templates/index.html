@@ -19,47 +19,47 @@
 
     <!-- Institutional top bar -->
     <div class="border-b border-stone-300 bg-[#1e3a6e]">
-      <div class="mx-auto flex max-w-screen-2xl items-center justify-between px-4 py-2 sm:px-6 lg:px-8">
+      <div class="mx-auto flex max-w-screen-2xl items-center justify-between px-4 py-1.5 sm:px-6 lg:px-8">
         <span class="text-xs font-medium uppercase tracking-widest text-blue-200">Tampere University · TREPO Analytics</span>
         <span class="text-xs text-blue-300/60">Open Repository Insights</span>
       </div>
     </div>
 
-    <main class="w-full px-4 py-8 sm:px-6 lg:px-8">
+    <main class="w-full px-4 py-6 sm:px-6 lg:px-8">
 
       <!-- Page header -->
-      <header class="mb-8 border-b-2 border-stone-300 pb-6">
-        <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+      <header class="mb-6 border-b border-stone-300 pb-4">
+        <div class="flex flex-col gap-1.5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-[#1e3a6e]">Repository Intelligence</p>
-            <h1 class="font-serif text-4xl font-semibold leading-tight text-stone-900">TREPO Research Analytics</h1>
-            <p class="mt-2 text-sm text-stone-500">Interactive analytics for Tampere University's open repository, covering theses, publications, download activity, and standout works.</p>
+            <p class="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#1e3a6e]">Repository Intelligence</p>
+            <h1 class="font-serif text-3xl font-semibold leading-tight text-stone-900">TREPO Research Analytics</h1>
+            <p class="mt-1 text-sm text-stone-500">Interactive analytics for Tampere University's open repository, covering theses, publications, download activity, and standout works.</p>
           </div>
-          <p class="text-xs text-stone-400">Offset {{ overview.next_offset }}&thinsp;/&thinsp;{{ overview.max_offset }} &nbsp;·&nbsp; page&nbsp;size&nbsp;{{ overview.page_size }}</p>
+          <p class="text-[11px] text-stone-400">Offset {{ overview.next_offset }}&thinsp;/&thinsp;{{ overview.max_offset }} &nbsp;·&nbsp; page&nbsp;size&nbsp;{{ overview.page_size }}</p>
         </div>
       </header>
 
       <!-- Summary metrics -->
-      <section class="mb-8 grid gap-0 border border-stone-300 bg-white sm:grid-cols-2 xl:grid-cols-5">
-        <article class="stat-rule border-r border-stone-200 px-6 py-5 last:border-r-0">
+      <section class="mb-6 grid gap-0 border border-stone-300 bg-white sm:grid-cols-2 xl:grid-cols-5">
+        <article class="stat-rule border-r border-stone-200 px-5 py-4 last:border-r-0">
           <div class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Total publications</div>
-          <div class="mt-2 font-serif text-4xl font-bold text-stone-900">{{ overview.total_publications }}</div>
+          <div class="mt-1.5 font-serif text-3xl font-bold text-stone-900">{{ overview.total_publications }}</div>
         </article>
-        <article class="stat-rule border-r border-stone-200 px-6 py-5 last:border-r-0">
+        <article class="stat-rule border-r border-stone-200 px-5 py-4 last:border-r-0">
           <div class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Total downloads</div>
-          <div class="mt-2 font-serif text-4xl font-bold text-stone-900">{{ overview.total_downloads }}</div>
+          <div class="mt-1.5 font-serif text-3xl font-bold text-stone-900">{{ overview.total_downloads }}</div>
         </article>
-        <article class="stat-rule border-r border-stone-200 px-6 py-5 last:border-r-0">
+        <article class="stat-rule border-r border-stone-200 px-5 py-4 last:border-r-0">
           <div class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Avg downloads per work</div>
-          <div class="mt-2 font-serif text-4xl font-bold text-stone-900">{{ overview.average_downloads_per_work }}</div>
+          <div class="mt-1.5 font-serif text-3xl font-bold text-stone-900">{{ overview.average_downloads_per_work }}</div>
         </article>
-        <article class="stat-rule border-r border-stone-200 px-6 py-5 last:border-r-0">
+        <article class="stat-rule border-r border-stone-200 px-5 py-4 last:border-r-0">
           <div class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Busiest year</div>
-          <div class="mt-2 font-serif text-4xl font-bold text-stone-900">{{ overview.busiest_year or '—' }}</div>
+          <div class="mt-1.5 font-serif text-3xl font-bold text-stone-900">{{ overview.busiest_year or '—' }}</div>
         </article>
-        <article class="stat-rule px-6 py-5">
+        <article class="px-5 py-4">
           <div class="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Peak month</div>
-          <div class="mt-2 font-serif text-4xl font-bold text-stone-900">{{ overview.peak_month or '—' }}</div>
+          <div class="mt-1.5 font-serif text-3xl font-bold text-stone-900">{{ overview.peak_month or '—' }}</div>
         </article>
       </section>
 
@@ -122,38 +122,37 @@
       </section>
       {% endif %}
 
-      <!-- Top tables row: Most downloaded + Trending + Most interesting -->
-      <section class="mb-8 grid gap-5 xl:grid-cols-3">
+      <!-- Compact top ranking grid -->
+      <section class="mb-6 grid gap-4 xl:grid-cols-3">
 
-        <!-- Most downloaded -->
         <article class="border border-stone-300 bg-white">
-          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
-            <h2 class="font-serif text-lg font-semibold text-stone-900">Most Downloaded</h2>
-            <p class="ml-4 mt-0.5 text-xs text-stone-400">Top 10 by downloads of all time</p>
+          <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
+            <h2 class="font-serif text-base font-semibold text-stone-900">Most Downloaded</h2>
+            <p class="ml-3 text-[11px] text-stone-400">Top 10 by all-time downloads</p>
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+            <table class="min-w-full text-left text-xs">
+              <thead class="bg-stone-50 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
                 <tr>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL/day</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL/day</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Title</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-stone-100">
                 {% for row in top_downloads %}
                 <tr class="hover:bg-stone-50">
-                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads }}</td>
-                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads_per_day if row.downloads_per_day is not none else '—' }}</td>
-                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-4 py-2.5 text-stone-700">
+                  <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads_per_day if row.downloads_per_day is not none else '—' }}</td>
+                  <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-3 py-2 text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
                 {% else %}
                 <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No data available.</td>
+                  <td colspan="4" class="px-3 py-6 text-center text-sm italic text-stone-400">No data available.</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -161,35 +160,34 @@
           </div>
         </article>
 
-        <!-- Trending (top by DL/day) -->
         <article class="border border-stone-300 bg-white">
-          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
-            <h2 class="font-serif text-lg font-semibold text-stone-900">Trending</h2>
-            <p class="ml-4 mt-0.5 text-xs text-stone-400">Top 10 by downloads per day since acceptance</p>
+          <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
+            <h2 class="font-serif text-base font-semibold text-stone-900">Trending</h2>
+            <p class="ml-3 text-[11px] text-stone-400">Top 10 by downloads per day</p>
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+            <table class="min-w-full text-left text-xs">
+              <thead class="bg-stone-50 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
                 <tr>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL/day</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL/day</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Title</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-stone-100">
                 {% for row in top_trending %}
                 <tr class="hover:bg-stone-50">
-                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads_per_day }}</td>
-                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads }}</td>
-                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-4 py-2.5 text-stone-700">
+                  <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads_per_day }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads }}</td>
+                  <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-3 py-2 text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
                 {% else %}
                 <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No data available yet.</td>
+                  <td colspan="4" class="px-3 py-6 text-center text-sm italic text-stone-400">No data available yet.</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -197,35 +195,34 @@
           </div>
         </article>
 
-        <!-- Most interesting -->
         <article class="border border-stone-300 bg-white">
-          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
-            <h2 class="font-serif text-lg font-semibold text-stone-900">Most Interesting</h2>
-            <p class="ml-4 mt-0.5 text-xs text-stone-400">Top 10 by LLM title interestingness rating</p>
+          <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
+            <h2 class="font-serif text-base font-semibold text-stone-900">Most Interesting</h2>
+            <p class="ml-3 text-[11px] text-stone-400">Top 10 by interest rating</p>
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+            <table class="min-w-full text-left text-xs">
+              <thead class="bg-stone-50 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
                 <tr>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Interest</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Int</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Title</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-stone-100">
                 {% for row in top_interesting %}
                 <tr class="hover:bg-stone-50">
-                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads if row.downloads is not none else '—' }}</td>
-                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
-                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-4 py-2.5 text-stone-700">
+                  <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
+                  <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-3 py-2 text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
                 {% else %}
                 <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No interestingness ratings available yet.</td>
+                  <td colspan="4" class="px-3 py-6 text-center text-sm italic text-stone-400">No interestingness ratings available yet.</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -233,75 +230,34 @@
           </div>
         </article>
 
-      </section>
-
-      <section class="mb-8 grid gap-5 xl:grid-cols-3">
-
-        <!-- Least downloaded -->
         <article class="border border-stone-300 bg-white">
-          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
-            <h2 class="font-serif text-lg font-semibold text-stone-900">Least Downloaded</h2>
-            <p class="ml-4 mt-0.5 text-xs text-stone-400">Bottom 10 by all-time downloads</p>
+          <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
+            <h2 class="font-serif text-base font-semibold text-stone-900">Dormant</h2>
+            <p class="ml-3 text-[11px] text-stone-400">Bottom 10 by downloads per day</p>
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+            <table class="min-w-full text-left text-xs">
+              <thead class="bg-stone-50 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
                 <tr>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL/day</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-stone-100">
-                {% for row in least_downloads %}
-                <tr class="hover:bg-stone-50">
-                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.downloads }}</td>
-                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads_per_day if row.downloads_per_day is not none else '—' }}</td>
-                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-4 py-2.5 text-stone-700">
-                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
-                  </td>
-                </tr>
-                {% else %}
-                <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No data available.</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <!-- Least trending -->
-        <article class="border border-stone-300 bg-white">
-          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
-            <h2 class="font-serif text-lg font-semibold text-stone-900">Dormant</h2>
-            <p class="ml-4 mt-0.5 text-xs text-stone-400">Bottom 10 by downloads per day</p>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
-                <tr>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL/day</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Accepted</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL/day</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Title</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-stone-100">
                 {% for row in least_trending %}
                 <tr class="hover:bg-stone-50">
-                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-stone-500">{{ row.downloads_per_day }}</td>
-                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads }}</td>
-                  <td class="px-4 py-2.5 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
-                  <td class="px-4 py-2.5 text-stone-700">
+                  <td class="px-3 py-2 font-mono text-sm font-semibold text-stone-500">{{ row.downloads_per_day }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads }}</td>
+                  <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-3 py-2 text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
                 {% else %}
                 <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No data available yet.</td>
+                  <td colspan="4" class="px-3 py-6 text-center text-sm italic text-stone-400">No data available yet.</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -309,35 +265,174 @@
           </div>
         </article>
 
-        <!-- Signal-rich picks -->
         <article class="border border-stone-300 bg-white">
-          <div class="border-b-2 border-[#1e3a6e] px-5 py-3 flex items-center">
-            <h2 class="font-serif text-lg font-semibold text-stone-900">Signal-Rich Picks</h2>
-            <p class="ml-4 mt-0.5 text-xs text-stone-400">Top 10 balancing download rank and title-interest rank</p>
+          <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
+            <h2 class="font-serif text-base font-semibold text-stone-900">Signal-Rich Picks</h2>
+            <p class="ml-3 text-[11px] text-stone-400">Best combined download and interest fit</p>
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="bg-stone-50 text-[11px] font-semibold uppercase tracking-widest text-stone-400">
+            <table class="min-w-full text-left text-xs">
+              <thead class="bg-stone-50 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
                 <tr>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Score</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">DL</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Interest</th>
-                  <th class="border-b border-stone-200 px-4 py-2.5 font-semibold">Title</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Score</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Int</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Title</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-stone-100">
                 {% for row in top_signal_rich %}
                 <tr class="hover:bg-stone-50">
-                  <td class="px-4 py-2.5 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.signal_score if row.signal_score is not none else '—' }}</td>
-                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
-                  <td class="px-4 py-2.5 font-mono text-sm text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
-                  <td class="px-4 py-2.5 text-stone-700">
+                  <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.signal_score if row.signal_score is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
+                  <td class="px-3 py-2 text-stone-700">
                     <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
                   </td>
                 </tr>
                 {% else %}
                 <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-sm italic text-stone-400">No blended ranking data available yet.</td>
+                  <td colspan="4" class="px-3 py-6 text-center text-sm italic text-stone-400">No blended ranking data available yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="border border-stone-300 bg-white">
+          <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
+            <h2 class="font-serif text-base font-semibold text-stone-900">Least Interesting</h2>
+            <p class="ml-3 text-[11px] text-stone-400">Bottom 10 by interest rating</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-xs">
+              <thead class="bg-stone-50 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Int</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Accepted</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in least_interesting %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-3 py-2 font-mono text-sm font-semibold text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
+                  <td class="px-3 py-2 tabular-nums text-stone-500 fmt-date">{{ row.accepted_date or '—' }}</td>
+                  <td class="px-3 py-2 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-3 py-6 text-center text-sm italic text-stone-400">No interestingness ratings available yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="border border-stone-300 bg-white">
+          <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
+            <h2 class="font-serif text-base font-semibold text-stone-900">Least Signal-Rich</h2>
+            <p class="ml-3 text-[11px] text-stone-400">Weakest combined fit</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-xs">
+              <thead class="bg-stone-50 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Score</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Int</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in least_signal_rich %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-3 py-2 font-mono text-sm font-semibold text-stone-500">{{ row.signal_score if row.signal_score is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
+                  <td class="px-3 py-2 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-3 py-6 text-center text-sm italic text-stone-400">No blended ranking data available yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="border border-stone-300 bg-white">
+          <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
+            <h2 class="font-serif text-base font-semibold text-stone-900">Download-Heavy Mismatch</h2>
+            <p class="ml-3 text-[11px] text-stone-400">Popular works with weaker interest scores</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-xs">
+              <thead class="bg-stone-50 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Gap</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Int</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in download_heavy_outliers %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.gap_score if row.gap_score is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
+                  <td class="px-3 py-2 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-3 py-6 text-center text-sm italic text-stone-400">No ranked mismatch data available yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="border border-stone-300 bg-white">
+          <div class="flex items-center border-b-2 border-[#1e3a6e] px-4 py-2.5">
+            <h2 class="font-serif text-base font-semibold text-stone-900">Interest-Heavy Mismatch</h2>
+            <p class="ml-3 text-[11px] text-stone-400">Strong titles with weaker download pull</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-xs">
+              <thead class="bg-stone-50 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+                <tr>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Gap</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Int</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">DL</th>
+                  <th class="border-b border-stone-200 px-3 py-2 font-semibold">Title</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                {% for row in interest_heavy_outliers %}
+                <tr class="hover:bg-stone-50">
+                  <td class="px-3 py-2 font-mono text-sm font-semibold text-[#1e3a6e]">{{ row.gap_score if row.gap_score is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.interestingness_rating if row.interestingness_rating is not none else '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-stone-500">{{ row.downloads if row.downloads is not none else '—' }}</td>
+                  <td class="px-3 py-2 text-stone-700">
+                    <a class="text-[#1e3a6e] underline decoration-stone-300 underline-offset-2 hover:decoration-[#1e3a6e]" href="{{ row.handle_url }}" target="_blank" rel="noreferrer">{{ row.title }}</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="px-3 py-6 text-center text-sm italic text-stone-400">No ranked mismatch data available yet.</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -432,6 +527,26 @@
             {% endif %}
           </div>
 
+        </div>
+      </section>
+
+      <section class="mb-8 border border-stone-300 bg-white">
+        <div class="border-b-2 border-[#1e3a6e] px-5 py-3">
+          <h2 class="font-serif text-xl font-semibold text-stone-900">Interest and signal distributions</h2>
+        </div>
+        <div class="grid gap-0 divide-x divide-stone-200 md:grid-cols-3">
+          <div class="px-5 py-5">
+            <p class="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Publications by interest bucket</p>
+            <div style="position:relative;height:220px"><canvas id="chartInterestBucketCounts"></canvas></div>
+          </div>
+          <div class="px-5 py-5">
+            <p class="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Downloads by interest bucket</p>
+            <div style="position:relative;height:220px"><canvas id="chartInterestBucketDownloads"></canvas></div>
+          </div>
+          <div class="px-5 py-5">
+            <p class="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Average signal score by work type</p>
+            <div style="position:relative;height:220px"><canvas id="chartTypeSignal"></canvas></div>
+          </div>
         </div>
       </section>
 
@@ -604,6 +719,13 @@
 
           const typeLabels = {{ type_counts_overall | map(attribute='work_type') | list | tojson }};
           const typeCounts = {{ type_counts_overall | map(attribute='publication_count') | list | tojson }};
+
+          const interestBucketLabels = {{ interest_bucket_summary | map(attribute='bucket_label') | list | tojson }};
+          const interestBucketCounts = {{ interest_bucket_summary | map(attribute='publication_count') | list | tojson }};
+          const interestBucketDownloads = {{ interest_bucket_summary | map(attribute='total_downloads') | list | tojson }};
+
+          const typeSignalLabels = {{ work_type_signal_summary | map(attribute='work_type') | list | tojson }};
+          const typeSignalScores = {{ work_type_signal_summary | map(attribute='average_signal_score') | list | tojson }};
 
           const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
           const rawMonthData = {{ pub_counts_by_month | tojson }};
@@ -792,6 +914,51 @@
               },
             },
           });
+
+          const bucketCountCanvas = document.getElementById('chartInterestBucketCounts');
+          if (bucketCountCanvas) {
+            new Chart(bucketCountCanvas, {
+              type: 'bar',
+              data: {
+                labels: interestBucketLabels,
+                datasets: [{ label: 'Publications', data: interestBucketCounts, backgroundColor: NAVY, borderRadius: 2 }],
+              },
+              options: barOpts(),
+            });
+          }
+
+          const bucketDownloadCanvas = document.getElementById('chartInterestBucketDownloads');
+          if (bucketDownloadCanvas) {
+            new Chart(bucketDownloadCanvas, {
+              type: 'bar',
+              data: {
+                labels: interestBucketLabels,
+                datasets: [{ label: 'Downloads', data: interestBucketDownloads, backgroundColor: ACCENT, borderRadius: 2 }],
+              },
+              options: barOpts(),
+            });
+          }
+
+          const typeSignalCanvas = document.getElementById('chartTypeSignal');
+          if (typeSignalCanvas) {
+            new Chart(typeSignalCanvas, {
+              type: 'bar',
+              data: {
+                labels: typeSignalLabels,
+                datasets: [{ label: 'Avg signal score', data: typeSignalScores, backgroundColor: MUTED, borderRadius: 2 }],
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: {
+                  x: { grid: { color: '#e7e5e4' }, ticks: { font: baseFont }, beginAtZero: true, max: 100 },
+                  y: { grid: { display: false }, ticks: { font: baseFont } },
+                },
+              },
+            });
+          }
 
           // Month chart is initialised above via applyPresetRange(20)
         })();

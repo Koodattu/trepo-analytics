@@ -51,6 +51,94 @@ class Database:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
+    @staticmethod
+    def _downloads_per_day_sql(
+        downloads_expr: str = "downloads",
+        accepted_date_expr: str = "accepted_date",
+    ) -> str:
+        return f"""
+            CASE
+                WHEN {accepted_date_expr} IS NOT NULL
+                     AND {accepted_date_expr} != ''
+                     AND {downloads_expr} IS NOT NULL
+                     AND (julianday('now') - julianday({accepted_date_expr})) > 0
+                THEN ROUND(
+                    CAST({downloads_expr} AS REAL) / (julianday('now') - julianday({accepted_date_expr})),
+                    2
+                )
+                ELSE NULL
+            END
+        """
+
+    def _signal_scored_cte(self, min_downloads: int = 5) -> str:
+        downloads_per_day_sql = self._downloads_per_day_sql()
+        return f"""
+            WITH ranked AS (
+                SELECT
+                    title,
+                    author,
+                    year,
+                    work_type,
+                    interestingness_rating,
+                    downloads,
+                    handle_url,
+                    accepted_date,
+                    {downloads_per_day_sql} AS downloads_per_day,
+                    ROW_NUMBER() OVER (
+                        ORDER BY downloads DESC, interestingness_rating DESC, title ASC
+                    ) AS download_rank,
+                    ROW_NUMBER() OVER (
+                        ORDER BY interestingness_rating DESC, downloads DESC, title ASC
+                    ) AS interest_rank,
+                    COUNT(*) OVER () AS candidate_count
+                FROM works
+                WHERE downloads IS NOT NULL
+                  AND downloads >= {min_downloads}
+                  AND interestingness_rating IS NOT NULL
+            ),
+            scored AS (
+                SELECT
+                    title,
+                    author,
+                    year,
+                    work_type,
+                    interestingness_rating,
+                    downloads,
+                    handle_url,
+                    accepted_date,
+                    downloads_per_day,
+                    ROUND(
+                        CASE
+                            WHEN candidate_count = 0 THEN 0
+                            ELSE ((candidate_count - download_rank + 1.0) / candidate_count) * 100.0
+                        END,
+                        1
+                    ) AS download_percentile,
+                    ROUND(
+                        CASE
+                            WHEN candidate_count = 0 THEN 0
+                            ELSE ((candidate_count - interest_rank + 1.0) / candidate_count) * 100.0
+                        END,
+                        1
+                    ) AS interest_percentile,
+                    ROUND(
+                        CASE
+                            WHEN candidate_count = 0 THEN 0
+                            ELSE (
+                                2.0
+                                * ((candidate_count - download_rank + 1.0) / candidate_count)
+                                * ((candidate_count - interest_rank + 1.0) / candidate_count)
+                            ) / (
+                                ((candidate_count - download_rank + 1.0) / candidate_count)
+                                + ((candidate_count - interest_rank + 1.0) / candidate_count)
+                            ) * 100.0
+                        END,
+                        1
+                    ) AS signal_score
+                FROM ranked
+            )
+        """
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path)
         connection.row_factory = sqlite3.Row
@@ -326,19 +414,12 @@ class Database:
         }
 
     def get_top_downloads(self, limit: int = 10) -> list[sqlite3.Row]:
+        downloads_per_day_sql = self._downloads_per_day_sql()
         return self.fetch_rows(
-            """
+            f"""
             SELECT
                 title, author, year, work_type, downloads, handle_url, accepted_date,
-                CASE
-                    WHEN accepted_date IS NOT NULL
-                         AND (julianday('now') - julianday(accepted_date)) > 0
-                    THEN ROUND(
-                        CAST(downloads AS REAL) / (julianday('now') - julianday(accepted_date)),
-                        2
-                    )
-                    ELSE NULL
-                END AS downloads_per_day
+                {downloads_per_day_sql} AS downloads_per_day
             FROM works
             WHERE downloads IS NOT NULL
             ORDER BY downloads DESC, title ASC
@@ -367,23 +448,37 @@ class Database:
         )
 
     def get_top_by_interestingness(self, limit: int = 10) -> list[sqlite3.Row]:
+        downloads_per_day_sql = self._downloads_per_day_sql()
         return self.fetch_rows(
-            """
+            f"""
             SELECT
                 title, author, year, work_type, interestingness_rating, downloads, handle_url, accepted_date,
-                CASE
-                    WHEN accepted_date IS NOT NULL
-                         AND downloads IS NOT NULL
-                         AND (julianday('now') - julianday(accepted_date)) > 0
-                    THEN ROUND(
-                        CAST(downloads AS REAL) / (julianday('now') - julianday(accepted_date)),
-                        2
-                    )
-                    ELSE NULL
-                END AS downloads_per_day
+                {downloads_per_day_sql} AS downloads_per_day
             FROM works
             WHERE interestingness_rating IS NOT NULL
             ORDER BY interestingness_rating DESC, downloads DESC, title ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
+    def get_least_interesting_works(self, limit: int = 10) -> list[sqlite3.Row]:
+        downloads_per_day_sql = self._downloads_per_day_sql()
+        return self.fetch_rows(
+            f"""
+            SELECT
+                title,
+                author,
+                year,
+                work_type,
+                interestingness_rating,
+                downloads,
+                handle_url,
+                accepted_date,
+                {downloads_per_day_sql} AS downloads_per_day
+            FROM works
+            WHERE interestingness_rating IS NOT NULL
+            ORDER BY interestingness_rating ASC, downloads DESC, title ASC
             LIMIT ?
             """,
             (limit,),
@@ -438,66 +533,8 @@ class Database:
 
     def get_top_signal_rich_works(self, limit: int = 10) -> list[sqlite3.Row]:
         return self.fetch_rows(
-            """
-            WITH ranked AS (
-                SELECT
-                    title,
-                    author,
-                    year,
-                    work_type,
-                    interestingness_rating,
-                    downloads,
-                    handle_url,
-                    accepted_date,
-                    CASE
-                        WHEN accepted_date IS NOT NULL
-                             AND downloads IS NOT NULL
-                             AND (julianday('now') - julianday(accepted_date)) > 0
-                        THEN ROUND(
-                            CAST(downloads AS REAL) / (julianday('now') - julianday(accepted_date)),
-                            2
-                        )
-                        ELSE NULL
-                    END AS downloads_per_day,
-                    ROW_NUMBER() OVER (
-                        ORDER BY downloads DESC, interestingness_rating DESC, title ASC
-                    ) AS download_rank,
-                    ROW_NUMBER() OVER (
-                        ORDER BY interestingness_rating DESC, downloads DESC, title ASC
-                    ) AS interest_rank,
-                    COUNT(*) OVER () AS candidate_count
-                FROM works
-                WHERE downloads IS NOT NULL
-                  AND downloads >= 5
-                  AND interestingness_rating IS NOT NULL
-            ),
-            scored AS (
-                SELECT
-                    title,
-                    author,
-                    year,
-                    work_type,
-                    interestingness_rating,
-                    downloads,
-                    handle_url,
-                    accepted_date,
-                    downloads_per_day,
-                    ROUND(
-                        CASE
-                            WHEN candidate_count = 0 THEN 0
-                            ELSE (
-                                2.0
-                                * ((candidate_count - download_rank + 1.0) / candidate_count)
-                                * ((candidate_count - interest_rank + 1.0) / candidate_count)
-                            ) / (
-                                ((candidate_count - download_rank + 1.0) / candidate_count)
-                                + ((candidate_count - interest_rank + 1.0) / candidate_count)
-                            ) * 100.0
-                        END,
-                        1
-                    ) AS signal_score
-                FROM ranked
-            )
+            self._signal_scored_cte()
+            + """
             SELECT
                 title,
                 author,
@@ -516,23 +553,83 @@ class Database:
             (limit,),
         )
 
+    def get_least_signal_rich_works(self, limit: int = 10) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            self._signal_scored_cte()
+            + """
+            SELECT
+                title,
+                author,
+                year,
+                work_type,
+                interestingness_rating,
+                downloads,
+                handle_url,
+                accepted_date,
+                downloads_per_day,
+                signal_score
+            FROM scored
+            ORDER BY signal_score ASC, downloads DESC, interestingness_rating ASC, title ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
+    def get_download_heavy_outliers(self, limit: int = 10) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            self._signal_scored_cte()
+            + """
+            SELECT
+                title,
+                author,
+                year,
+                work_type,
+                interestingness_rating,
+                downloads,
+                handle_url,
+                accepted_date,
+                downloads_per_day,
+                signal_score,
+                ROUND(download_percentile - interest_percentile, 1) AS gap_score
+            FROM scored
+            ORDER BY gap_score DESC, downloads DESC, interestingness_rating ASC, title ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
+    def get_interest_heavy_outliers(self, limit: int = 10) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            self._signal_scored_cte()
+            + """
+            SELECT
+                title,
+                author,
+                year,
+                work_type,
+                interestingness_rating,
+                downloads,
+                handle_url,
+                accepted_date,
+                downloads_per_day,
+                signal_score,
+                ROUND(interest_percentile - download_percentile, 1) AS gap_score
+            FROM scored
+            ORDER BY gap_score DESC, interestingness_rating DESC, downloads ASC, title ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
     def get_random_interesting_works(
         self, limit: int = 3, min_rating: int = 80
     ) -> list[sqlite3.Row]:
+        downloads_per_day_sql = self._downloads_per_day_sql()
         return self.fetch_rows(
-            """
+            f"""
             SELECT
                 title, author, year, work_type, interestingness_rating, downloads, handle_url, accepted_date,
-                CASE
-                    WHEN accepted_date IS NOT NULL
-                         AND downloads IS NOT NULL
-                         AND (julianday('now') - julianday(accepted_date)) > 0
-                    THEN ROUND(
-                        CAST(downloads AS REAL) / (julianday('now') - julianday(accepted_date)),
-                        2
-                    )
-                    ELSE NULL
-                END AS downloads_per_day
+                {downloads_per_day_sql} AS downloads_per_day
             FROM works
             WHERE interestingness_rating IS NOT NULL
               AND interestingness_rating >= ?
@@ -546,66 +643,8 @@ class Database:
         self, limit: int = 3, min_score: float = 90.0
     ) -> list[sqlite3.Row]:
         return self.fetch_rows(
-            """
-            WITH ranked AS (
-                SELECT
-                    title,
-                    author,
-                    year,
-                    work_type,
-                    interestingness_rating,
-                    downloads,
-                    handle_url,
-                    accepted_date,
-                    CASE
-                        WHEN accepted_date IS NOT NULL
-                             AND downloads IS NOT NULL
-                             AND (julianday('now') - julianday(accepted_date)) > 0
-                        THEN ROUND(
-                            CAST(downloads AS REAL) / (julianday('now') - julianday(accepted_date)),
-                            2
-                        )
-                        ELSE NULL
-                    END AS downloads_per_day,
-                    ROW_NUMBER() OVER (
-                        ORDER BY downloads DESC, interestingness_rating DESC, title ASC
-                    ) AS download_rank,
-                    ROW_NUMBER() OVER (
-                        ORDER BY interestingness_rating DESC, downloads DESC, title ASC
-                    ) AS interest_rank,
-                    COUNT(*) OVER () AS candidate_count
-                FROM works
-                WHERE downloads IS NOT NULL
-                  AND downloads >= 5
-                  AND interestingness_rating IS NOT NULL
-            ),
-            scored AS (
-                SELECT
-                    title,
-                    author,
-                    year,
-                    work_type,
-                    interestingness_rating,
-                    downloads,
-                    handle_url,
-                    accepted_date,
-                    downloads_per_day,
-                    ROUND(
-                        CASE
-                            WHEN candidate_count = 0 THEN 0
-                            ELSE (
-                                2.0
-                                * ((candidate_count - download_rank + 1.0) / candidate_count)
-                                * ((candidate_count - interest_rank + 1.0) / candidate_count)
-                            ) / (
-                                ((candidate_count - download_rank + 1.0) / candidate_count)
-                                + ((candidate_count - interest_rank + 1.0) / candidate_count)
-                            ) * 100.0
-                        END,
-                        1
-                    ) AS signal_score
-                FROM ranked
-            )
+            self._signal_scored_cte()
+            + """
             SELECT
                 title,
                 author,
@@ -623,6 +662,64 @@ class Database:
             LIMIT ?
             """,
             (min_score, limit),
+        )
+
+    def get_interest_bucket_summary(self) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            """
+            WITH RECURSIVE buckets AS (
+                SELECT 0 AS bucket_index, '0-10' AS bucket_label
+                UNION ALL
+                SELECT
+                    bucket_index + 1,
+                    printf(
+                        '%d-%d',
+                        (bucket_index + 1) * 10,
+                        CASE
+                            WHEN bucket_index + 1 = 9 THEN 100
+                            ELSE (bucket_index + 2) * 10
+                        END
+                    )
+                FROM buckets
+                WHERE bucket_index < 9
+            ),
+            bucketed AS (
+                SELECT
+                    CASE
+                        WHEN interestingness_rating >= 100 THEN 9
+                        ELSE CAST(interestingness_rating / 10 AS INTEGER)
+                    END AS bucket_index,
+                    COUNT(*) AS publication_count,
+                    COALESCE(SUM(downloads), 0) AS total_downloads
+                FROM works
+                WHERE interestingness_rating IS NOT NULL
+                  AND interestingness_rating BETWEEN 0 AND 100
+                GROUP BY 1
+            )
+            SELECT
+                buckets.bucket_label,
+                COALESCE(bucketed.publication_count, 0) AS publication_count,
+                COALESCE(bucketed.total_downloads, 0) AS total_downloads
+            FROM buckets
+            LEFT JOIN bucketed ON bucketed.bucket_index = buckets.bucket_index
+            ORDER BY buckets.bucket_index ASC
+            """
+        )
+
+    def get_work_type_signal_summary(self) -> list[sqlite3.Row]:
+        return self.fetch_rows(
+            self._signal_scored_cte()
+            + """
+            SELECT
+                COALESCE(work_type, 'Unknown') AS work_type,
+                ROUND(AVG(signal_score), 1) AS average_signal_score,
+                ROUND(AVG(interestingness_rating), 1) AS average_interest,
+                ROUND(AVG(downloads), 1) AS average_downloads,
+                COUNT(*) AS publication_count
+            FROM scored
+            GROUP BY COALESCE(work_type, 'Unknown')
+            ORDER BY average_signal_score DESC, publication_count DESC, work_type ASC
+            """
         )
 
     def get_top_authors(self, limit: int = 10) -> list[sqlite3.Row]:
