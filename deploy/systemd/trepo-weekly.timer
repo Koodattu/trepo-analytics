@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the TREPO incremental update every Monday night
+
+[Timer]
+OnCalendar=Mon *-*-* 02:15:00 Europe/Helsinki
+Persistent=true
+RandomizedDelaySec=15m
+AccuracySec=1m
+Unit=trepo-weekly.service
+
+[Install]
+WantedBy=timers.target

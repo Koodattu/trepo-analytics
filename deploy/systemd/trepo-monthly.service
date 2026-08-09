@@ -1,0 +1,15 @@
+[Unit]
+Description=TREPO monthly download-count refresh
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+StartLimitIntervalSec=6h
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/trepo-analytics
+ExecStart=/usr/bin/flock --exclusive /run/lock/trepo-analytics-jobs.lock /usr/bin/docker compose --profile jobs run --rm --no-deps worker refresh-downloads --delay 1.0
+TimeoutStartSec=infinity
+Restart=on-failure
+RestartSec=30m

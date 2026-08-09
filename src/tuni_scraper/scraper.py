@@ -1,5 +1,6 @@
 import logging
 import time
+from collections.abc import Sequence
 from urllib.parse import urlparse
 
 import requests
@@ -15,7 +16,7 @@ from tuni_scraper.config import (
     build_recent_submissions_url,
 )
 from tuni_scraper.database import Database
-from tuni_scraper.models import ScrapeResult
+from tuni_scraper.models import DownloadRefreshResult, ScrapeResult
 from tuni_scraper.parsing import parse_accepted_date, parse_download_stats_payload, parse_recent_submissions
 
 
@@ -116,10 +117,12 @@ def run_scrape(
         try:
             html = fetch_html(session, listing_url, timeout=timeout)
         except requests.RequestException as error:
-            LOGGER.warning("Failed to fetch recent submissions page at offset %s: %s", current_offset, error)
-            break
+            raise RuntimeError(f"Failed to fetch recent submissions page at offset {current_offset}.") from error
 
         publications = parse_recent_submissions(html, base_url=BASE_URL)
+        if stop_on_known_page and not publications:
+            raise RuntimeError(f"TREPO returned no publications at offset {current_offset}.")
+
         page_contains_only_known_works = bool(publications)
 
         for publication in publications:
@@ -128,15 +131,16 @@ def run_scrape(
             already_seen = database.has_work(publication.handle_url)
             database.upsert_work(publication)
             works_seen += 1
+            needs_detail_fetch = database.needs_detail_fetch(publication.handle_url)
 
             if already_seen:
-                if stop_on_known_page:
+                if stop_on_known_page and not needs_detail_fetch:
                     continue
             else:
                 page_contains_only_known_works = False
                 new_handles.append(publication.handle_url)
 
-            if not refresh_downloads and not database.needs_detail_fetch(publication.handle_url):
+            if not refresh_downloads and not needs_detail_fetch:
                 continue
 
             if delay_seconds > 0:
@@ -189,4 +193,62 @@ def run_scrape(
         detail_updates=detail_updates,
         ending_offset=current_offset,
         new_handles=tuple(new_handles),
+    )
+
+
+def run_download_refresh(
+    database: Database,
+    delay_seconds: float = DEFAULT_DELAY_SECONDS,
+    timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    limit: int | None = None,
+    handle_urls: Sequence[str] | None = None,
+    max_consecutive_failures: int = 10,
+) -> DownloadRefreshResult:
+    if delay_seconds < 0:
+        raise ValueError("delay_seconds must not be negative")
+    if max_consecutive_failures <= 0:
+        raise ValueError("max_consecutive_failures must be greater than zero")
+
+    handles = list(handle_urls) if handle_urls is not None else database.get_work_handles(limit=limit)
+    session = build_session()
+    downloads_updated = 0
+    failed_handles: list[str] = []
+    consecutive_failures = 0
+
+    for index, handle_url in enumerate(handles):
+        if index > 0 and delay_seconds > 0:
+            time.sleep(delay_seconds)
+
+        LOGGER.info("Refreshing download count %s/%s: %s", index + 1, len(handles), handle_url)
+        try:
+            downloads = fetch_download_count(session, handle_url, timeout=timeout)
+        except (requests.RequestException, ValueError) as error:
+            LOGGER.warning("Failed to refresh download count for %s: %s", handle_url, error)
+            failed_handles.append(handle_url)
+        else:
+            if downloads is not None:
+                database.update_download_count(handle_url, downloads)
+                downloads_updated += 1
+                consecutive_failures = 0
+                continue
+
+            LOGGER.warning("TREPO returned no download count for %s; preserving the stored value.", handle_url)
+            failed_handles.append(handle_url)
+
+        consecutive_failures += 1
+        if consecutive_failures >= max_consecutive_failures:
+            remaining_handles = handles[index + 1 :]
+            failed_handles = [*remaining_handles, *failed_handles]
+            LOGGER.error(
+                "Aborting the refresh after %s consecutive failures; %s handles remain queued.",
+                consecutive_failures,
+                len(remaining_handles),
+            )
+            break
+
+    return DownloadRefreshResult(
+        works_considered=len(handles),
+        downloads_updated=downloads_updated,
+        failures=len(failed_handles),
+        failed_handles=tuple(failed_handles),
     )

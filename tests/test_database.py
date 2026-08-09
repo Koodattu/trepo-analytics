@@ -111,3 +111,28 @@ def test_get_random_interest_heavy_mismatch_works_returns_hidden_gems(tmp_path: 
 
     assert [row["title"] for row in rows] == ["Beta"]
     assert rows[0]["gap_score"] > 0
+
+
+def test_detail_and_download_updates_preserve_unrelated_values(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+    handle_url = "https://example.test/1"
+
+    database.update_detail(handle_url, downloads=None, accepted_date=None)
+    row = database.fetch_one(
+        "SELECT downloads, accepted_date FROM works WHERE handle_url = ?",
+        (handle_url,),
+    )
+
+    assert row is not None
+    assert row["downloads"] == 100
+    assert row["accepted_date"] == "2024-01-01"
+
+    database.update_download_count(handle_url, downloads=125)
+    row = database.fetch_one(
+        "SELECT downloads, accepted_date FROM works WHERE handle_url = ?",
+        (handle_url,),
+    )
+
+    assert row is not None
+    assert row["downloads"] == 125
+    assert row["accepted_date"] == "2024-01-01"

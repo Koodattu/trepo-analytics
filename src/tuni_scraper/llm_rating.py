@@ -7,7 +7,15 @@ from dataclasses import dataclass
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-from tuni_scraper.config import DEFAULT_LLM_BATCH_SIZE, DEFAULT_LLM_MAX_RETRIES, DEFAULT_OPENAI_MODEL, OPENAI_API_KEY_ENV, OPENAI_MODEL_ENV
+from tuni_scraper.config import (
+    DEFAULT_LLM_BATCH_SIZE,
+    DEFAULT_LLM_MAX_RETRIES,
+    DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENAI_REASONING_EFFORT,
+    OPENAI_API_KEY_ENV,
+    OPENAI_MODEL_ENV,
+    OPENAI_REASONING_EFFORT_ENV,
+)
 from tuni_scraper.database import Database
 
 
@@ -55,6 +63,7 @@ class PublicationInterestRatings(BaseModel):
 @dataclass(slots=True)
 class InterestRatingResult:
     model: str
+    reasoning_effort: str
     works_considered: int
     works_rated: int
     batches_sent: int
@@ -92,6 +101,7 @@ def _validate_ratings(
 def _request_batch_ratings(
     client: OpenAI,
     model: str,
+    reasoning_effort: str,
     batch: list[dict[str, str]],
     max_retries: int,
 ) -> dict[str, int]:
@@ -101,7 +111,7 @@ def _request_batch_ratings(
     for attempt in range(1, max_retries + 1):
         completion = client.chat.completions.parse(
             model=model,
-            temperature=0.2,
+            reasoning_effort=reasoning_effort,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -133,6 +143,7 @@ def _request_batch_ratings(
 def run_interest_rating(
     database: Database,
     model: str | None = None,
+    reasoning_effort: str | None = None,
     batch_size: int = DEFAULT_LLM_BATCH_SIZE,
     limit: int | None = None,
     include_rated: bool = False,
@@ -145,11 +156,12 @@ def run_interest_rating(
     if max_retries <= 0:
         raise ValueError("max_retries must be greater than zero")
 
-    api_key = os.getenv(OPENAI_API_KEY_ENV)
-    if not api_key:
-        raise RuntimeError(f"{OPENAI_API_KEY_ENV} is not set. Add it to the environment or the project .env file.")
-
     resolved_model = model or os.getenv(OPENAI_MODEL_ENV) or DEFAULT_OPENAI_MODEL
+    resolved_reasoning_effort = (
+        reasoning_effort
+        or os.getenv(OPENAI_REASONING_EFFORT_ENV)
+        or DEFAULT_OPENAI_REASONING_EFFORT
+    )
     rows = database.get_works_for_interest_rating(
         limit=limit,
         include_rated=include_rated,
@@ -158,10 +170,15 @@ def run_interest_rating(
     if not rows:
         return InterestRatingResult(
             model=resolved_model,
+            reasoning_effort=resolved_reasoning_effort,
             works_considered=0,
             works_rated=0,
             batches_sent=0,
         )
+
+    api_key = os.getenv(OPENAI_API_KEY_ENV)
+    if not api_key:
+        raise RuntimeError(f"{OPENAI_API_KEY_ENV} is not set. Add it to the environment or the project .env file.")
 
     client = OpenAI(api_key=api_key)
     work_items = []
@@ -174,6 +191,7 @@ def run_interest_rating(
     if not work_items:
         return InterestRatingResult(
             model=resolved_model,
+            reasoning_effort=resolved_reasoning_effort,
             works_considered=0,
             works_rated=0,
             batches_sent=0,
@@ -203,7 +221,13 @@ def run_interest_rating(
             len(batch),
             resolved_model,
         )
-        ratings = _request_batch_ratings(client=client, model=resolved_model, batch=batch, max_retries=max_retries)
+        ratings = _request_batch_ratings(
+            client=client,
+            model=resolved_model,
+            reasoning_effort=resolved_reasoning_effort,
+            batch=batch,
+            max_retries=max_retries,
+        )
         database.update_interest_ratings(
             [(ratings[item["batch_id"]], item["handle_url"]) for item in batch]
         )
@@ -212,6 +236,7 @@ def run_interest_rating(
 
     return InterestRatingResult(
         model=resolved_model,
+        reasoning_effort=resolved_reasoning_effort,
         works_considered=len(work_items),
         works_rated=works_rated,
         batches_sent=batches_sent,

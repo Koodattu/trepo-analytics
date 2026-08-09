@@ -140,12 +140,14 @@ class Database:
         """
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.db_path)
+        connection = sqlite3.connect(self.db_path, timeout=30)
         connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA busy_timeout = 30000")
         return connection
 
     def _initialize(self) -> None:
         with self._connect() as connection:
+            connection.execute("PRAGMA journal_mode = WAL")
             connection.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS works (
@@ -297,14 +299,14 @@ class Database:
     def needs_detail_fetch(self, handle_url: str) -> bool:
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT detail_scraped_at, accepted_date FROM works WHERE handle_url = ?",
+                "SELECT detail_scraped_at, accepted_date, downloads FROM works WHERE handle_url = ?",
                 (handle_url,),
             ).fetchone()
 
         if row is None:
             return True
 
-        return row["detail_scraped_at"] is None or row["accepted_date"] is None
+        return row["detail_scraped_at"] is None or row["accepted_date"] is None or row["downloads"] is None
 
     def update_detail(
         self,
@@ -317,10 +319,29 @@ class Database:
             connection.execute(
                 """
                 UPDATE works
-                SET downloads = ?, accepted_date = ?, detail_scraped_at = ?, last_seen_at = ?
+                SET downloads = COALESCE(?, downloads),
+                    accepted_date = COALESCE(?, accepted_date),
+                    detail_scraped_at = ?,
+                    last_seen_at = ?
                 WHERE handle_url = ?
                 """,
                 (downloads, accepted_date, timestamp, timestamp, handle_url),
+            )
+
+    def get_work_handles(self, limit: int | None = None) -> list[str]:
+        query = "SELECT handle_url FROM works ORDER BY handle_url ASC"
+        params: list[object] = []
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
+
+        return [row["handle_url"] for row in self.fetch_rows(query, params)]
+
+    def update_download_count(self, handle_url: str, downloads: int) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE works SET downloads = ?, last_seen_at = ? WHERE handle_url = ?",
+                (downloads, utc_now_iso(), handle_url),
             )
 
     def get_works_for_interest_rating(

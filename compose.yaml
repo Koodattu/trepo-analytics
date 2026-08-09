@@ -1,9 +1,44 @@
+x-runtime: &runtime
+  build:
+    context: .
+    args:
+      APP_UID: ${APP_UID:-1000}
+      APP_GID: ${APP_GID:-1000}
+  image: trepo-analytics:${TREPO_IMAGE_TAG:-latest}
+  init: true
+  read_only: true
+  volumes:
+    - type: bind
+      source: ${TREPO_DATA_DIR:-./runtime-data}
+      target: /app/data
+  environment: &runtime-environment
+    TUNI_SCRAPER_DB_PATH: /app/data/trepo_scraper.db
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+
 services:
   trepo-analytics:
-    build:
-      context: .
-    image: trepo-analytics
-    container_name: trepo-analytics
+    <<: *runtime
     restart: unless-stopped
     ports:
       - "127.0.0.1:5000:5000"
+
+  worker:
+    <<: *runtime
+    profiles:
+      - jobs
+    restart: "no"
+    environment:
+      <<: *runtime-environment
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-low}
+      TZ: Europe/Helsinki
+    entrypoint:
+      - trepo-scraper
+    command:
+      - report

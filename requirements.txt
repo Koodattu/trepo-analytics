@@ -1,7 +1,1 @@
-beautifulsoup4
-Flask
-openai
-pydantic
-python-dotenv
-pytest
-requests
+-e .[dev,server]

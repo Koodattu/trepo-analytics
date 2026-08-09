@@ -83,7 +83,6 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python -m pip install -e .
 ```
 
 After installation, the `trepo-scraper` command is available in the activated environment.
@@ -99,13 +98,15 @@ The CLI loads environment variables from a `.env` file in the project root. The 
 | `TUNI_SCRAPER_DB_PATH` | SQLite database path. | `data/trepo_scraper.db` |
 | `TUNI_SCRAPER_EXPORT_PATH` | Default JSON export path. | `data/publications.json` |
 | `OPENAI_API_KEY` | API key used by `rate-interest` and `update-new` ratings. | Not set |
-| `OPENAI_MODEL` | OpenAI model used for title ratings. | `gpt-4.1-mini` |
+| `OPENAI_MODEL` | OpenAI model used for title ratings. | `gpt-5.6-luna` |
+| `OPENAI_REASONING_EFFORT` | Reasoning effort used for title ratings. | `low` |
 
 Example `.env`:
 
 ```dotenv
 TUNI_SCRAPER_DB_PATH=data/trepo_scraper.db
-OPENAI_MODEL=gpt-4.1-mini
+OPENAI_MODEL=gpt-5.6-luna
+OPENAI_REASONING_EFFORT=low
 OPENAI_API_KEY=your-api-key
 ```
 
@@ -125,13 +126,13 @@ Limit a test run to two listing pages:
 trepo-scraper scrape --limit-pages 2 --delay 1.0
 ```
 
-Start over from the first listing page and refresh download counts:
+Refresh the download count for every work already in the database:
 
 ```powershell
-trepo-scraper scrape --start-offset 0 --refresh-downloads --delay 1.0
+trepo-scraper refresh-downloads --delay 1.0
 ```
 
-Fetch only newly appeared submissions from the front page, then rate those new titles:
+Fetch only newly appeared submissions from the front page, then rate every title still missing a rating:
 
 ```powershell
 trepo-scraper update-new --delay 1.0 --batch-size 100
@@ -196,7 +197,8 @@ trepo-scraper --db-path data/another_trepo.db report
 | Command | Purpose |
 | --- | --- |
 | `scrape` | Scrape recent submissions and enrich works with accepted dates and download counts. |
-| `update-new` | Scan from the front page for new works, stop when known works are reached, and rate only the new titles. |
+| `update-new` | Scan from the front page for new works, stop when known works are reached, then rate the unrated backlog. |
+| `refresh-downloads` | Refresh download counts directly from every handle already stored in the database. |
 | `report` | Print text reports from the SQLite database. |
 | `export-json` | Export overview data and all works to JSON. |
 | `rate-interest` | Use OpenAI structured output to score stored publication titles from 0 to 100. |
@@ -214,6 +216,8 @@ Useful `scrape` options:
 | `--timeout` | HTTP timeout in seconds. |
 | `--limit-pages` | Stop after a fixed number of listing pages. Useful for tests. |
 | `--refresh-downloads` | Re-fetch details and download counts even for already-scraped works. |
+
+The dedicated `refresh-downloads` command is preferable for routine count updates: it calls only TREPO's statistics endpoint, does not depend on a fixed listing offset, and preserves the stored count when TREPO returns no valid value. Use `scrape --refresh-downloads` only when accepted-date metadata also needs to be revisited.
 
 ## Stored Data
 
@@ -256,14 +260,25 @@ Those ratings unlock several dashboard views:
 - "Interest-Heavy Outliers" highlights unusually interesting titles with lower download performance.
 - "Random Gems" helps surface works that might otherwise be buried in the repository.
 
-The rating command requires `OPENAI_API_KEY`.
+The rating command requires `OPENAI_API_KEY`. The default configuration uses `gpt-5.6-luna` with low reasoning effort. `update-new` runs rating only after the incremental scrape completes successfully, and it includes any previously unrated backlog so a transient OpenAI failure can recover on the next run.
 
 ## Docker
 
-Start the dashboard with Docker Compose:
+Create the runtime environment file, set the API key, and seed an untracked persistent data directory from the checked-in database:
 
 ```powershell
-docker compose up --build -d
+Copy-Item .env.example .env
+New-Item -ItemType Directory -Force runtime-data
+if (-not (Test-Path runtime-data/trepo_scraper.db)) { Copy-Item data/trepo_scraper.db runtime-data/trepo_scraper.db }
+```
+
+On a Linux VM, set `APP_UID` and `APP_GID` in `.env` to the output of `id -u` and `id -g`, and ensure that account owns `runtime-data`.
+
+Build with the newest matching base image and start the dashboard:
+
+```powershell
+docker compose build --pull
+docker compose up -d
 ```
 
 Stop it again:
@@ -272,17 +287,53 @@ Stop it again:
 docker compose down
 ```
 
-The Compose setup builds the local Dockerfile, starts a single container named `trepo-analytics`, and publishes it only on `127.0.0.1:5000` so a host reverse proxy can expose it deliberately. The image includes the current `data/trepo_scraper.db` file at build time and serves the Flask app with Gunicorn at:
+The dashboard is published only on `127.0.0.1:5000` so a host reverse proxy can expose it deliberately. The untracked host directory configured by `TREPO_DATA_DIR` is mounted at `/app/data`, so scraper updates and ratings survive image rebuilds and container replacement without dirtying the Git checkout. The application runs as a non-root user with a read-only root filesystem; only the data mount and temporary filesystem are writable.
 
 ```text
 http://127.0.0.1:5000
 ```
 
-To point the container at another SQLite file, pass:
+The Dockerfile uses a pinned Python 3.14 slim image, a separate build stage, a persistent pip build cache, and a runtime stage containing only Python plus the installed application. The database, tests, local environment, and screenshot are excluded from the image build context.
+
+Run either maintenance workflow manually without starting another dashboard container:
 
 ```powershell
-docker run -e TUNI_SCRAPER_DB_PATH=/app/data/your.db trepo-analytics
+docker compose --profile jobs run --rm worker update-new --delay 1.0 --batch-size 100 --model gpt-5.6-luna --reasoning-effort low
+docker compose --profile jobs run --rm worker refresh-downloads --delay 1.0
 ```
+
+### Automatic VM schedule
+
+The repository includes systemd services and timers for a Linux VM:
+
+- Weekly incremental scrape followed by LLM rating: Monday at 02:15 Europe/Helsinki, with up to 15 minutes of randomized delay.
+- Full download-count refresh: the first Saturday of each month at 00:30 Europe/Helsinki, also with up to 15 minutes of randomized delay.
+
+The explicit IANA timezone follows Finnish daylight-saving changes. Both timers are persistent, so systemd catches up after downtime. Both services use the same blocking `flock`, which prevents the weekly and monthly writers from overlapping. If a monthly pass has failures, their handles are queued beside the database; systemd retries only that queue during the same monthly cycle, while a new month always starts a full pass. Ten consecutive failures stop the pass early so a TREPO outage is reported promptly instead of producing a false success.
+
+The checked-in services expect the repository at `/opt/trepo-analytics`. If you deploy elsewhere, edit `WorkingDirectory` in both `.service` files before installing them. On a systemd-based VM with Docker Compose and `flock` installed:
+
+```bash
+cp -n .env.example .env
+install -d -m 0750 runtime-data
+cp -n data/trepo_scraper.db runtime-data/trepo_scraper.db
+sudo cp deploy/systemd/trepo-weekly.service /etc/systemd/system/
+sudo cp deploy/systemd/trepo-weekly.timer /etc/systemd/system/
+sudo cp deploy/systemd/trepo-monthly.service /etc/systemd/system/
+sudo cp deploy/systemd/trepo-monthly.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now trepo-weekly.timer trepo-monthly.timer
+systemctl list-timers 'trepo-*'
+```
+
+Inspect job output through journald:
+
+```bash
+journalctl -u trepo-weekly.service
+journalctl -u trepo-monthly.service
+```
+
+To refresh base images and dependencies later, update the pinned versions, run the tests, then rebuild with `docker compose build --pull`. No unattended image updater is included, so application updates remain deliberate and reviewable.
 
 ## Project Layout
 
@@ -290,6 +341,7 @@ docker run -e TUNI_SCRAPER_DB_PATH=/app/data/your.db trepo-analytics
 src/tuni_scraper/
   cli.py          Command-line interface
   config.py       Defaults, paths, and environment handling
+  jobs.py         Weekly scrape-then-rating workflow
   scraper.py      TREPO HTTP scraping and enrichment workflow
   parsing.py      HTML and JSON parsing helpers
   database.py     SQLite schema, queries, and export logic
@@ -299,7 +351,10 @@ src/tuni_scraper/
   templates/      Dashboard HTML template
 
 tests/
+  test_cli.py
   test_database.py
+  test_jobs.py
+  test_llm_rating.py
   test_parsing.py
   test_scraper.py
 
@@ -321,7 +376,7 @@ Run the test suite:
 pytest
 ```
 
-The tests cover parsing behavior, database behavior, and scraper control flow. For scraping changes, prefer small `--limit-pages` runs before a full refresh.
+The tests cover parsing, database updates, weekly job ordering, OpenAI request configuration, scraper control flow, and the database-driven download refresh. For scraping changes, prefer small `--limit-pages` or `refresh-downloads --limit` runs before a full refresh.
 
 ## Notes
 

@@ -1,0 +1,15 @@
+[Unit]
+Description=TREPO weekly incremental update and LLM rating
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+StartLimitIntervalSec=6h
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/trepo-analytics
+ExecStart=/usr/bin/flock --exclusive /run/lock/trepo-analytics-jobs.lock /usr/bin/docker compose --profile jobs run --rm --no-deps worker update-new --delay 1.0 --batch-size 100 --model gpt-5.6-luna --reasoning-effort low
+TimeoutStartSec=infinity
+Restart=on-failure
+RestartSec=30m

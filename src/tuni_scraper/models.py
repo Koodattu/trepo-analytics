@@ -31,3 +31,11 @@ class ScrapeResult:
     detail_updates: int
     ending_offset: int
     new_handles: tuple[str, ...]
+
+
+@dataclass(slots=True)
+class DownloadRefreshResult:
+    works_considered: int
+    downloads_updated: int
+    failures: int
+    failed_handles: tuple[str, ...]

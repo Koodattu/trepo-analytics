@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh all TREPO download counts on the first Saturday of each month
+
+[Timer]
+OnCalendar=Sat *-*-01..07 00:30:00 Europe/Helsinki
+Persistent=true
+RandomizedDelaySec=15m
+AccuracySec=1m
+Unit=trepo-monthly.service
+
+[Install]
+WantedBy=timers.target
