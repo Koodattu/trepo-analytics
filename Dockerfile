@@ -1,27 +1,31 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1
 
 ARG PYTHON_VERSION=3.14.6
+ARG UV_VERSION=0.12.3
+
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 
 FROM python:${PYTHON_VERSION}-slim-trixie AS builder
 
-ARG PIP_VERSION=26.2.1
-
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    VIRTUAL_ENV=/opt/venv \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_DOWNLOADS=0 \
     PATH="/opt/venv/bin:$PATH"
-
-RUN python -m venv "$VIRTUAL_ENV"
 
 WORKDIR /build
 
-COPY pyproject.toml README.md ./
+COPY --from=uv /uv /bin/uv
+COPY pyproject.toml uv.lock ./
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-editable --no-install-project --extra server
+
+COPY README.md LICENSE ./
 COPY src ./src
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    python -m pip install --upgrade "pip==$PIP_VERSION" \
-    && python -m pip install ".[server]" \
-    && python -m pip uninstall --yes pip
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-editable --extra server
 
 FROM python:${PYTHON_VERSION}-slim-trixie AS runtime
 

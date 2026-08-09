@@ -69,6 +69,7 @@ http://127.0.0.1:5000
 ## Requirements
 
 - Python 3.13 or newer
+- uv 0.12.3
 - SQLite, provided by Python's standard library
 - Network access to `trepo.tuni.fi` for scraping
 - Optional: Docker and Docker Compose
@@ -79,10 +80,8 @@ http://127.0.0.1:5000
 PowerShell:
 
 ```powershell
-python -m venv .venv
+uv sync --all-extras --locked
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
 ```
 
 After installation, the `trepo-scraper` command is available in the activated environment.
@@ -293,7 +292,7 @@ The dashboard is published only on `127.0.0.1:5000` so a host reverse proxy can 
 http://127.0.0.1:5000
 ```
 
-The Dockerfile uses a pinned Python 3.14 slim image, a separate build stage, a persistent pip build cache, and a runtime stage containing only Python plus the installed application. The database, tests, local environment, and screenshot are excluded from the image build context.
+The Dockerfile uses a pinned Python 3.14 slim image and uv release, installs the locked dependency graph in a cacheable layer, and copies only the resulting production environment into the runtime stage. The allowlisted build context contains only the package metadata, lockfile, README, license, and application source.
 
 Run either maintenance workflow manually without starting another dashboard container:
 
@@ -367,7 +366,7 @@ data/
 Install development dependencies:
 
 ```powershell
-python -m pip install -e ".[dev]"
+uv sync --all-extras --locked
 ```
 
 Run the test suite:
