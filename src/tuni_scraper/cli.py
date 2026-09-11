@@ -1,5 +1,6 @@
 import argparse
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,6 +20,7 @@ from tuni_scraper.config import (
     resolve_export_path,
 )
 from tuni_scraper.database import Database
+from tuni_scraper.diagnostics import DiagnosticFormatter
 from tuni_scraper.jobs import run_monthly_download_refresh, run_weekly_update
 from tuni_scraper.llm_rating import run_interest_rating
 from tuni_scraper.reports import render_table
@@ -26,8 +28,26 @@ from tuni_scraper.scraper import run_scrape
 from tuni_scraper.web import create_app
 
 
-def configure_logging() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+LOGGER = logging.getLogger(__name__)
+
+
+def configure_logging(args: argparse.Namespace) -> RotatingFileHandler | None:
+    formatter = DiagnosticFormatter(
+        f"%(asctime)s %(levelname)s pid=%(process)d command={args.command} %(name)s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z",
+    )
+    console = logging.StreamHandler()
+    console.setFormatter(formatter)
+    logging.basicConfig(level=logging.INFO, handlers=[console])
+    if args.command not in {"scrape", "update-new", "refresh-downloads", "rate-interest"}:
+        return None
+    log_path = args.db_path.parent / "logs" / "trepo-errors.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    handler = RotatingFileHandler(log_path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
+    handler.setLevel(logging.WARNING)
+    handler.setFormatter(formatter)
+    logging.getLogger("tuni_scraper").addHandler(handler)
+    return handler
 
 
 def configure_environment() -> None:
@@ -195,9 +215,25 @@ def print_report(database: Database, limit: int) -> None:
 
 def main() -> None:
     configure_environment()
-    configure_logging()
     parser = build_parser()
     args = parser.parse_args()
+    handler = configure_logging(args)
+    try:
+        run_command(args)
+    except SystemExit as error:
+        if error.code:
+            LOGGER.error("Command failed with exit status %s.", error.code)
+        raise
+    except Exception:
+        LOGGER.exception("Command failed.")
+        raise SystemExit(1) from None
+    finally:
+        if handler is not None:
+            logging.getLogger("tuni_scraper").removeHandler(handler)
+            handler.close()
+
+
+def run_command(args: argparse.Namespace) -> None:
     database = Database(args.db_path)
 
     if args.command == "scrape":
@@ -302,4 +338,4 @@ def main() -> None:
         app.run(host=args.host, port=args.port, debug=args.debug)
         return
 
-    parser.error(f"Unknown command: {args.command}")
+    raise ValueError(f"Unknown command: {args.command}")

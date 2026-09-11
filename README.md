@@ -332,6 +332,20 @@ journalctl -u trepo-weekly.service
 journalctl -u trepo-monthly.service
 ```
 
+Maintenance commands also append warnings and failures to `logs/trepo-errors.log` beside the selected database. With the default Docker mount, this is `runtime-data/logs/trepo-errors.log` on the host. The log rotates at 5 MiB and keeps three backups, surviving container replacement. Entries include the command, process ID, timestamp, and exception traceback for failed commands; commands still exit nonzero on failure.
+
+After HTTP retries are exhausted, diagnostics record the final response's URL, status, retry count, selected server/challenge headers, and up to 2,000 characters of visible error text. Cookies and authorization headers are excluded; scripts and form values are removed, and common credentials and nonessential URL query values are redacted. Invalid download-statistics responses are recorded too. Earlier retry responses are not retained, and network failures without a response have no HTTP body to capture.
+
+To rerun the weekly job after a failure, clear its retry limit and start the existing service:
+
+```bash
+sudo systemctl reset-failed trepo-weekly.service
+sudo systemctl start --no-block trepo-weekly.service
+journalctl -u trepo-weekly.service -f
+```
+
+This uses the same job lock and retries as the scheduled run and leaves the weekly timer enabled. After deploying code changes, rebuild the worker image before starting the job so it uses the updated code.
+
 To refresh base images and dependencies later, update the pinned versions, run the tests, then rebuild with `docker compose build --pull`. No unattended image updater is included, so application updates remain deliberate and reviewable.
 
 ## Project Layout

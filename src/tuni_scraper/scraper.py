@@ -16,6 +16,7 @@ from tuni_scraper.config import (
     build_recent_submissions_url,
 )
 from tuni_scraper.database import Database
+from tuni_scraper.diagnostics import log_http_error, log_response_error
 from tuni_scraper.models import DownloadRefreshResult, ScrapeResult
 from tuni_scraper.parsing import parse_accepted_date, parse_download_stats_payload, parse_recent_submissions
 
@@ -42,10 +43,12 @@ def build_session() -> requests.Session:
         status_forcelist=RETRYABLE_STATUS_CODES,
         allowed_methods=frozenset({"GET"}),
         respect_retry_after_header=True,
+        raise_on_status=False,
     )
     adapter = HTTPAdapter(max_retries=retries, pool_connections=10, pool_maxsize=10)
     session.mount("https://", adapter)
     session.mount("http://", adapter)
+    session.hooks["response"].append(log_http_error)
 
     return session
 
@@ -77,7 +80,14 @@ def fetch_download_count(session: requests.Session, handle_url: str, timeout: in
         timeout=timeout,
     )
     response.raise_for_status()
-    return parse_download_stats_payload(response.json())
+    try:
+        downloads = parse_download_stats_payload(response.json())
+    except ValueError:
+        log_response_error(response, "Invalid download statistics payload")
+        raise
+    if downloads is None:
+        log_response_error(response, "Download statistics contained no valid count")
+    return downloads
 
 
 def run_scrape(

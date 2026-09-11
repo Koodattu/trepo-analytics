@@ -43,3 +43,4 @@ def test_refresh_downloads_exits_nonzero_when_failures_remain(tmp_path: Path, mo
         main()
 
     assert error.value.code == 1
+    assert "exit status 1" in (tmp_path / "logs" / "trepo-errors.log").read_text(encoding="utf-8")
