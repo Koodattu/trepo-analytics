@@ -69,7 +69,7 @@ http://127.0.0.1:5000
 ## Requirements
 
 - Python 3.13 or newer
-- uv 0.12.3
+- uv 0.13.9
 - SQLite, provided by Python's standard library
 - Network access to `trepo.tuni.fi` for scraping
 - Optional: Docker and Docker Compose
@@ -292,7 +292,7 @@ The dashboard is published only on `127.0.0.1:5000` so a host reverse proxy can 
 http://127.0.0.1:5000
 ```
 
-The Dockerfile uses a pinned Python 3.14 slim image and uv release, installs the locked dependency graph in a cacheable layer, and copies only the resulting production environment into the runtime stage. The allowlisted build context contains only the package metadata, lockfile, README, license, and application source.
+The Dockerfile uses digest-pinned Python 3.15 slim and uv images, installs the locked dependency graph in a cacheable layer, and copies only the resulting production environment into the runtime stage. The allowlisted build context contains only the package metadata, lockfile, README, license, and application source.
 
 Run either maintenance workflow manually without starting another dashboard container:
 
@@ -376,6 +376,12 @@ data/
 ```
 
 ## Development
+
+The dashboard ships its compiled stylesheet in the Python package. After changing dashboard utility classes or `assets/dashboard.css`, regenerate it from the repository root with the [Tailwind CSS v4.3.5 standalone CLI](https://github.com/tailwindlabs/tailwindcss/releases/tag/v4.3.5).
+
+```powershell
+tailwindcss -i assets/dashboard.css -o src/tuni_scraper/static/dashboard.css --minify
+```
 
 Install development dependencies:
 

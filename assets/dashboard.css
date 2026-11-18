@@ -1,0 +1,15 @@
+@import "tailwindcss" source(none);
+@source "../src/tuni_scraper/templates/index.html";
+
+@theme {
+  --font-sans: 'Source Sans 3', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+}
+
+@layer base {
+  body { background-color: #f6f4ef; }
+  h1, h2, h3 { font-family: var(--font-serif); }
+  button:enabled { cursor: pointer; }
+}
+
+.stat-rule { border-top: 3px solid #1e3a6e; }

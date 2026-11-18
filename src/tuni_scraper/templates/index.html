@@ -7,19 +7,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-    <style>
-      body { font-family: 'Source Sans 3', system-ui, sans-serif; background-color: #f6f4ef; }
-      h1, h2, h3, .font-serif { font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; }
-      .stat-rule { border-top: 3px solid #1e3a6e; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js" integrity="sha384-Emf5ZVIUiarAdhkgtqK+5/Z5qIvM6QoVrS+qAVtfyZVuD5lIHrac0me485+Antp0" crossorigin="anonymous"></script>
   </head>
   <body class="min-h-screen text-stone-800 antialiased">
 
     <!-- Institutional top bar -->
     <div class="border-b border-stone-300 bg-[#1e3a6e]">
-      <div class="mx-auto flex max-w-screen-2xl items-center justify-between px-4 py-1.5 sm:px-6 lg:px-8">
+      <div class="mx-auto flex max-w-[96rem] items-center justify-between px-4 py-1.5 sm:px-6 lg:px-8">
         <span class="text-xs font-medium uppercase tracking-widest text-blue-200">Tampere University · TREPO Analytics</span>
         <span class="text-xs text-blue-300/60">Open Repository Insights</span>
       </div>
@@ -582,7 +577,7 @@
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end xl:flex-nowrap">
               <div class="min-w-40">
                 <label for="monthPreset" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Range preset</label>
-                <select id="monthPreset" class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none">
+                <select id="monthPreset" class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden">
                   <option value="1">Last year</option>
                   <option value="5">5 years</option>
                   <option value="10">10 years</option>
@@ -595,11 +590,11 @@
               </div>
               <div class="min-w-36">
                 <label for="monthStart" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">Start month</label>
-                <input id="monthStart" type="month" class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none" />
+                <input id="monthStart" type="month" class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden" />
               </div>
               <div class="min-w-36">
                 <label for="monthEnd" class="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-stone-400">End month</label>
-                <input id="monthEnd" type="month" class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none" />
+                <input id="monthEnd" type="month" class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden" />
               </div>
             </div>
           </div>
@@ -1040,7 +1035,7 @@
                   min="1"
                   max="500"
                   value="{{ filters.limit }}"
-                  class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+                  class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
                 />
               </div>
               <div class="shrink-0">
@@ -1057,7 +1052,7 @@
               type="text"
               value="{{ filters.title }}"
               placeholder="Search by title…"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             />
           </div>
           <div class="min-w-40 flex-[2]">
@@ -1068,7 +1063,7 @@
               type="text"
               value="{{ filters.author }}"
               placeholder="Search by author…"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             />
           </div>
           <div class="min-w-24 flex-1">
@@ -1076,7 +1071,7 @@
             <select
               id="year"
               name="year"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             >
               <option value="">All</option>
               {% for year in available_years %}
@@ -1091,7 +1086,7 @@
             <select
               id="work_type"
               name="work_type"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             >
               <option value="">All</option>
               {% for work_type in available_types %}
@@ -1109,7 +1104,7 @@
               type="number"
               min="0"
               value="{{ filters.min_downloads if filters.min_downloads is not none else '' }}"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             />
           </div>
           <div class="min-w-28 flex-1">
@@ -1120,7 +1115,7 @@
               type="number"
               min="0"
               value="{{ filters.max_downloads if filters.max_downloads is not none else '' }}"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             />
           </div>
           <div class="min-w-28 flex-1">
@@ -1132,7 +1127,7 @@
               min="0"
               max="100"
               value="{{ filters.min_interest if filters.min_interest is not none else '' }}"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             />
           </div>
           <div class="min-w-28 flex-1">
@@ -1144,7 +1139,7 @@
               min="0"
               max="100"
               value="{{ filters.max_interest if filters.max_interest is not none else '' }}"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             />
           </div>
           <div class="min-w-36 flex-1">
@@ -1154,7 +1149,7 @@
               name="accepted_start"
               type="date"
               value="{{ filters.accepted_start }}"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             />
           </div>
           <div class="min-w-36 flex-1">
@@ -1164,7 +1159,7 @@
               name="accepted_end"
               type="date"
               value="{{ filters.accepted_end }}"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             />
           </div>
           <div class="min-w-40 flex-1">
@@ -1172,7 +1167,7 @@
             <select
               id="sort_by"
               name="sort_by"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             >
               <option value="downloads" {{ 'selected' if filters.sort_by == 'downloads' else '' }}>Downloads</option>
               <option value="downloads_per_day" {{ 'selected' if filters.sort_by == 'downloads_per_day' else '' }}>Downloads per day</option>
@@ -1185,7 +1180,7 @@
             <select
               id="sort_direction"
               name="sort_direction"
-              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-none"
+              class="block w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 focus:border-[#1e3a6e] focus:bg-white focus:outline-hidden"
             >
               <option value="desc" {{ 'selected' if filters.sort_direction == 'desc' else '' }}>Descending</option>
               <option value="asc" {{ 'selected' if filters.sort_direction == 'asc' else '' }}>Ascending</option>

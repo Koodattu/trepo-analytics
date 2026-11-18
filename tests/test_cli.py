@@ -2,9 +2,25 @@ from pathlib import Path
 
 import pytest
 
-from tuni_scraper.cli import build_parser, main
+from tuni_scraper.cli import build_parser, main, print_report
+from tuni_scraper.database import Database
 from tuni_scraper.jobs import MonthlyRefreshResult
-from tuni_scraper.models import DownloadRefreshResult
+from tuni_scraper.models import DownloadRefreshResult, PublicationRecord
+
+
+def test_report_counts_works_with_known_downloads(tmp_path: Path, capsys) -> None:
+    database = Database(tmp_path / "report.db")
+    for title, downloads in [("Known", 0), ("Missing", None)]:
+        database.upsert_work(PublicationRecord(
+            handle_url=f"https://example.test/{title}", title=title, downloads=downloads,
+            author=None, year=None, work_type=None,
+        ))
+
+    print_report(database, limit=1)
+
+    output = capsys.readouterr().out
+    assert "Total publications: 2\n" in output
+    assert "Publications with downloads: 1\n" in output
 
 
 def test_parser_resolves_path_defaults_from_current_environment(tmp_path: Path, monkeypatch) -> None:

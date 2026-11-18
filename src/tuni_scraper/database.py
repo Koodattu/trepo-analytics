@@ -1,6 +1,7 @@
 import json
 import sqlite3
 from collections.abc import Sequence
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -146,7 +147,7 @@ class Database:
         return connection
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("PRAGMA journal_mode = WAL")
             connection.executescript(
                 """
@@ -400,6 +401,7 @@ class Database:
             """
             SELECT
                 COUNT(*) AS total_publications,
+                COUNT(downloads) AS publications_with_downloads,
                 COALESCE(SUM(downloads), 0) AS total_downloads,
                 ROUND(COALESCE(AVG(COALESCE(downloads, 0)), 0), 1) AS average_downloads_per_work,
                 (
@@ -424,6 +426,7 @@ class Database:
         progress = self.get_progress()
         return {
             "total_publications": row["total_publications"] if row else 0,
+            "publications_with_downloads": row["publications_with_downloads"] if row else 0,
             "total_downloads": row["total_downloads"] if row else 0,
             "average_downloads_per_work": row["average_downloads_per_work"] if row else 0,
             "busiest_year": row["busiest_year"] if row else None,
